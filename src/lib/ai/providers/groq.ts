@@ -7,7 +7,10 @@ export function createGroqProvider(): AiProvider {
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is not set");
   }
-  const model = process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
+  const model = process.env.GROQ_MODEL?.trim();
+  if (!model) {
+    throw new Error("GROQ_MODEL is not set");
+  }
   const client = new Groq({ apiKey });
 
   return {

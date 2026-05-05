@@ -7,8 +7,10 @@ export function createAnthropicProvider(): AiProvider {
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is not set");
   }
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-sonnet-20241022";
+  const model = process.env.ANTHROPIC_MODEL?.trim();
+  if (!model) {
+    throw new Error("ANTHROPIC_MODEL is not set");
+  }
   const client = new Anthropic({ apiKey });
 
   return {

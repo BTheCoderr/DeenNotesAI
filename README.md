@@ -105,7 +105,7 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
    cp .env.example .env.local
    ```
 
-   Fill in at minimum: `NEXT_PUBLIC_SUPABASE_URL`, one of the client keys (`NEXT_PUBLIC_SUPABASE_ANON_KEY` and/or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), `AI_PROVIDER`, and a provider API key. Do not commit `.env.local`.
+   Fill in at minimum: `NEXT_PUBLIC_SUPABASE_URL`, one of the client keys (`NEXT_PUBLIC_SUPABASE_ANON_KEY` and/or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), `AI_PROVIDER`, the matching model env (`OPENAI_MODEL` / `ANTHROPIC_MODEL` / `GROQ_MODEL`), and that provider’s API key. Do not commit `.env.local`.
 
 5. **Auth for local dev**
 

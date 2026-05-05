@@ -7,7 +7,10 @@ export function createOpenAiProvider(): AiProvider {
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is not set");
   }
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const model = process.env.OPENAI_MODEL?.trim();
+  if (!model) {
+    throw new Error("OPENAI_MODEL is not set");
+  }
   const client = new OpenAI({ apiKey });
 
   return {

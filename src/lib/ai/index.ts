@@ -20,14 +20,15 @@ function resolveProvider(name: string): AiProvider {
     case "openai":
       return createOpenAiProvider();
     default:
-      throw new Error(
-        `Unknown AI_PROVIDER "${name}". Use openai, anthropic, or groq.`,
-      );
+      throw new Error(`Unknown AI_PROVIDER "${name}".`);
   }
 }
 
 export function getAiProvider(): AiProvider {
-  const name = process.env.AI_PROVIDER ?? "openai";
+  const name = process.env.AI_PROVIDER?.trim();
+  if (!name) {
+    throw new Error("AI_PROVIDER is not set");
+  }
   return resolveProvider(name);
 }
 

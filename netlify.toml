@@ -2,6 +2,9 @@
 # If Netlify marks those variables as "Contains secret values", secret scanning will
 # match the inlined JWT against build output and fail. Omit them from secret-value
 # scanning, or in the UI uncheck "Contains secret values" for those keys only.
+#
+# AI_PROVIDER / *_MODEL are not secrets; if marked secret, scanning matches literals
+# in src/lib/ai/providers/types.ts and fails the build.
 # See: https://ntl.fyi/configure-secrets-scanning
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,AI_PROVIDER,OPENAI_MODEL,ANTHROPIC_MODEL,GROQ_MODEL"
