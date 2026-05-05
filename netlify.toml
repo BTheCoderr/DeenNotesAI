@@ -1,0 +1,7 @@
+# Supabase NEXT_PUBLIC_* client keys are embedded in the browser bundle by design.
+# If Netlify marks those variables as "Contains secret values", secret scanning will
+# match the inlined JWT against build output and fail. Omit them from secret-value
+# scanning, or in the UI uncheck "Contains secret values" for those keys only.
+# See: https://ntl.fyi/configure-secrets-scanning
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
