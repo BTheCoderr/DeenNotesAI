@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { BetaFeedbackCta } from "@/components/dashboard/BetaFeedbackCta";
+import { DeenNotesAppIcon } from "@/components/brand/DeenNotesAppIcon";
+import { DeenNotesSecondaryMark } from "@/components/brand/DeenNotesSecondaryMark";
 import { labelForNoteType } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 
@@ -44,11 +46,9 @@ export default async function NotesListPage() {
         </div>
 
         <div className="rounded-3xl border border-black/10 bg-surface px-6 py-16 text-center shadow-card">
-          <div
-            className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent text-2xl font-display font-semibold"
-            aria-hidden
-          >
-            DN
+          <div className="relative mx-auto mb-6 flex w-fit flex-col items-center gap-3">
+            <DeenNotesAppIcon size="lg" variant="light" />
+            <DeenNotesSecondaryMark size="sm" className="opacity-85 text-accent" />
           </div>
           <h2 className="font-display text-xl font-semibold text-ink">
             Your journal is ready

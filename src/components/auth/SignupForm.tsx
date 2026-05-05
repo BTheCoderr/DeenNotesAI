@@ -28,6 +28,14 @@ export function SignupForm() {
       },
     });
     if (signError) {
+      if (process.env.NODE_ENV === "development") {
+        const e = signError as Error & { status?: number };
+        console.log("[deennotes signup]", {
+          name: e.name,
+          message: e.message,
+          status: typeof e.status === "number" ? e.status : undefined,
+        });
+      }
       setError(signError.message);
       setLoading(false);
       return;

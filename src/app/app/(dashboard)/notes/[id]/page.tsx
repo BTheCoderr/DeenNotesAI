@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { CopyButton } from "@/components/CopyButton";
-import { SaveShareCardButton } from "@/components/notes/SaveShareCardButton";
+import { ShareCard } from "@/components/notes/ShareCard";
 import { labelForNoteType } from "@/lib/constants";
 import { asStringArray } from "@/lib/note-json";
 import { createClient } from "@/lib/supabase/server";
@@ -109,21 +108,7 @@ export default async function NoteDetailPage({ params }: Props) {
         <ListCard title="Dua prompts" items={duaPrompts} />
       </div>
 
-      <section className="mt-8 rounded-2xl border border-accent/20 bg-accent-soft/40 p-5 md:p-6">
-        <h2 className="font-display text-lg font-semibold text-ink">
-          Shareable reminder
-        </h2>
-        <p className="mt-4 text-ink/90 leading-relaxed whitespace-pre-wrap font-medium">
-          {note.share_card_text}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <CopyButton text={note.share_card_text} />
-          <SaveShareCardButton
-            noteId={note.id}
-            shareCardText={note.share_card_text}
-          />
-        </div>
-      </section>
+      <ShareCard shareCardText={note.share_card_text} noteId={note.id} />
 
       <section className="mt-6 rounded-2xl border border-black/5 bg-background p-5 text-sm text-muted leading-relaxed">
         <h2 className="font-semibold text-ink text-base mb-2">Disclaimer</h2>

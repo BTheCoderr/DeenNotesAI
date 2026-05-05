@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { safeAppPath } from "@/lib/safe-app-path";
+
 import { getSupabaseBrowserConfig } from "./env";
 
 export async function updateSession(request: NextRequest) {
@@ -35,14 +37,12 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isApp = path.startsWith("/app");
 
-  function safeAppPath(next: string | null): string {
-    if (!next || !next.startsWith("/app")) {
-      return "/app";
-    }
-    if (next.includes("..") || next.includes("//")) {
-      return "/app";
-    }
-    return next;
+  if (process.env.NODE_ENV === "development") {
+    console.log("[deennotes middleware]", {
+      pathname: path,
+      hasSession: Boolean(user),
+      redirectedToLogin: Boolean(!user && isApp),
+    });
   }
 
   if (!user && isApp) {

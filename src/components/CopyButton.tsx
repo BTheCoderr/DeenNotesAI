@@ -7,9 +7,11 @@ import { cn } from "@/lib/utils";
 type CopyButtonProps = {
   text: string;
   className?: string;
+  /** Default: "Copy" */
+  idleLabel?: string;
 };
 
-export function CopyButton({ text, className }: CopyButtonProps) {
+export function CopyButton({ text, className, idleLabel = "Copy" }: CopyButtonProps) {
   const [state, setState] = useState<"idle" | "copied" | "error">("idle");
 
   async function handleCopy() {
@@ -28,7 +30,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
       ? "Copied"
       : state === "error"
         ? "Try again"
-        : "Copy";
+        : idleLabel;
 
   return (
     <button

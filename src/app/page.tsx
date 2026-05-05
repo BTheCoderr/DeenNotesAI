@@ -1,13 +1,19 @@
 import Link from "next/link";
 
+import { DeenNotesLogo } from "@/components/brand/DeenNotesLogo";
+import { DeenNotesTagline } from "@/components/brand/DeenNotesTagline";
+
 export default function LandingPage() {
   return (
     <div className="min-h-dvh flex flex-col">
       <header className="border-b border-black/5 bg-surface/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <span className="font-display text-xl font-semibold text-ink tracking-tight">
-            DeenNotes
-          </span>
+          <Link
+            href="/"
+            className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <DeenNotesLogo size="lg" />
+          </Link>
           <div className="flex items-center gap-2 text-sm font-medium">
             <Link
               href="/login"
@@ -38,6 +44,9 @@ export default function LandingPage() {
             Organize reflections, extract reminders, and shape gentle next
             steps—without replacing your scholar or imam.
           </p>
+          <div className="mt-8 flex justify-center">
+            <DeenNotesTagline size="md" variant="subtle" className="max-w-md" />
+          </div>
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/signup"

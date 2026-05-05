@@ -9,14 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#f7f6f2",
-        surface: "#fdfcfa",
+        background: "#F6F4F0",
+        surface: "#FDFCF9",
         ink: "#1c1b18",
         muted: "#5c5a54",
+        /** Brand tagline / soft labels — do not replace global `muted` for body copy */
+        stoneMuted: "#7A756C",
+        mint: "#CFE8E0",
+        stoneWarm: "#F6F4F0",
         accent: {
-          DEFAULT: "#0d6b4d",
-          soft: "#e6f2ec",
-          hover: "#0a5a40",
+          DEFAULT: "#127A63",
+          soft: "#CFE8E0",
+          hover: "#0f6b56",
         },
       },
       fontFamily: {

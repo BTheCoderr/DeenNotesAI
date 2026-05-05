@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="dnIconTaper" x1="10" y1="0" x2="54" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#127A63" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#127A63" stop-opacity="0.48"/>
+      <stop offset="1" stop-color="#127A63" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#F6F4F0"/>
+  <text
+    x="32"
+    y="40"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="26"
+    font-weight="600"
+    fill="#127A63"
+  >DN</text>
+  <ellipse cx="32" cy="48" rx="20" ry="2" fill="url(#dnIconTaper)"/>
+</svg>

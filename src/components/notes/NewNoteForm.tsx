@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { NOTE_TYPE_LABELS } from "@/lib/constants";
 import type { NoteTypeEnum } from "@/lib/database.types";
-import { NEW_NOTE_EXAMPLES } from "@/lib/note-samples";
+import { NEW_NOTE_USE_CASES } from "@/lib/note-samples";
 
 const noteTypes: NoteTypeEnum[] = [
   "khutbah",
@@ -14,6 +14,8 @@ const noteTypes: NoteTypeEnum[] = [
   "halaqa",
   "personal_reminder",
 ];
+
+const FORM_ID = "new-note-form";
 
 export function NewNoteForm() {
   const router = useRouter();
@@ -48,87 +50,98 @@ export function NewNoteForm() {
     setLoading(false);
   }
 
-  function applyExample(ex: (typeof NEW_NOTE_EXAMPLES)[number]) {
+  function applyUseCase(ex: (typeof NEW_NOTE_USE_CASES)[number]) {
     setNoteType(ex.noteType);
     setRawInput(ex.rawInput);
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-6 rounded-2xl border border-black/5 bg-surface p-5 md:p-8 shadow-card"
-    >
-      <div>
-        <p className="text-sm font-medium text-ink mb-2">Try a sample prompt</p>
-        <p className="text-xs text-muted mb-3 leading-relaxed">
-          Tap one to fill the form—edit freely before generating.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {NEW_NOTE_EXAMPLES.map((ex) => (
-            <button
-              key={ex.id}
-              type="button"
-              onClick={() => applyExample(ex)}
-              className="rounded-full border border-black/10 bg-background px-3 py-1.5 text-xs font-medium text-ink hover:border-accent/35 hover:text-accent transition-colors text-left"
-            >
-              {ex.label}
-            </button>
-          ))}
+    <>
+      <section
+        id="new-reflection"
+        className="scroll-mt-28"
+        aria-label="Reflection form"
+      >
+        <form id={FORM_ID} onSubmit={onSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <label
+            htmlFor="reflection-input"
+            className="block text-sm font-medium text-stone-700 text-center"
+          >
+            What&apos;s on your mind?
+          </label>
+          <textarea
+            id="reflection-input"
+            name="reflection"
+            required
+            rows={8}
+            value={rawInput}
+            onChange={(e) => setRawInput(e.target.value)}
+            placeholder="Paste something you heard, read, or felt… Messy thoughts are okay."
+            className="w-full min-h-[11rem] resize-y rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base text-stone-800 outline-none leading-relaxed placeholder:text-stone-400 transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="note-type"
+            className="block text-xs text-center text-stone-500"
+          >
+            Format
+          </label>
+          <select
+            id="note-type"
+            value={noteType}
+            onChange={(e) => setNoteType(e.target.value as NoteTypeEnum)}
+            className="w-full rounded-xl border border-stone-200 bg-white/90 px-3 py-2.5 text-sm text-stone-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+          >
+            {noteTypes.map((t) => (
+              <option key={t} value={t}>
+                {NOTE_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs text-center text-stone-500">Or start here</p>
+          <div className="flex flex-col gap-2">
+            {NEW_NOTE_USE_CASES.map((ex) => (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => applyUseCase(ex)}
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-left text-sm font-medium text-stone-800 shadow-sm transition active:scale-[0.99] hover:border-emerald-200 hover:bg-emerald-50/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+              >
+                {ex.buttonLabel}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {error ? (
+          <p
+            role="alert"
+            className="text-sm text-red-800 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 text-center"
+          >
+            {error}
+          </p>
+        ) : null}
+        </form>
+      </section>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-stone-50/95 backdrop-blur-md pt-3 shadow-[0_-4px_24px_-2px_rgba(0,0,0,0.06)]">
+        <div className="max-w-md mx-auto px-4 pt-1 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+          <button
+            type="submit"
+            form={FORM_ID}
+            disabled={loading || !rawInput.trim()}
+            className="w-full rounded-xl bg-emerald-600 text-white font-semibold py-3.5 text-base shadow-md shadow-emerald-900/15 transition hover:bg-emerald-700 disabled:opacity-45 disabled:shadow-none disabled:cursor-not-allowed"
+          >
+            {loading ? "Creating…" : "Create reflection"}
+          </button>
         </div>
       </div>
-
-      <div>
-        <label
-          htmlFor="note-type"
-          className="block text-sm font-medium text-ink mb-2"
-        >
-          Note type
-        </label>
-        <select
-          id="note-type"
-          value={noteType}
-          onChange={(e) => setNoteType(e.target.value as NoteTypeEnum)}
-          className="w-full rounded-xl border border-black/10 bg-background px-3 py-3 text-ink outline-none focus:ring-2 focus:ring-accent/30"
-        >
-          {noteTypes.map((t) => (
-            <option key={t} value={t}>
-              {NOTE_TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label
-          htmlFor="raw-input"
-          className="block text-sm font-medium text-ink mb-2"
-        >
-          Your notes
-        </label>
-        <textarea
-          id="raw-input"
-          required
-          rows={14}
-          value={rawInput}
-          onChange={(e) => setRawInput(e.target.value)}
-          placeholder="Paste or type what you heard, read, or want to remember—messy notes are fine."
-          className="w-full resize-y min-h-[200px] rounded-2xl border border-black/10 bg-background px-3 py-3 text-base text-ink outline-none focus:ring-2 focus:ring-accent/30 leading-relaxed"
-        />
-      </div>
-
-      {error ? (
-        <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">
-          {error}
-        </p>
-      ) : null}
-
-      <button
-        type="submit"
-        disabled={loading || !rawInput.trim()}
-        className="w-full rounded-full bg-accent text-white font-semibold py-3.5 text-base hover:bg-accent-hover disabled:opacity-50 transition-colors"
-      >
-        {loading ? "Generating…" : "Generate structured note"}
-      </button>
-    </form>
+    </>
   );
 }

@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import { safeAppPath } from "@/lib/safe-app-path";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/app";
+  const next = safeAppPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +27,14 @@ export function LoginForm() {
       password,
     });
     if (signError) {
+      if (process.env.NODE_ENV === "development") {
+        const e = signError as Error & { status?: number };
+        console.log("[deennotes login]", {
+          name: e.name,
+          message: e.message,
+          status: typeof e.status === "number" ? e.status : undefined,
+        });
+      }
       setError(signError.message);
       setLoading(false);
       return;

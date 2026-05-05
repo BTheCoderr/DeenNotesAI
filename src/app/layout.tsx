@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 
 import { SafetyNotice } from "@/components/SafetyNotice";
@@ -17,6 +17,10 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#127A63",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "DeenNotes AI",
@@ -24,6 +28,11 @@ export const metadata: Metadata = {
   },
   description:
     "Turn khutbahs and Islamic lectures into structured notes, reminders, and reflection prompts.",
+  appleWebApp: {
+    capable: true,
+    title: "DeenNotes AI",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({

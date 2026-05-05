@@ -1,14 +1,14 @@
 import type { NoteTypeEnum } from "@/lib/database.types";
 
-export const NEW_NOTE_EXAMPLES: readonly {
+export const NEW_NOTE_USE_CASES: readonly {
   id: string;
-  label: string;
+  buttonLabel: string;
   noteType: NoteTypeEnum;
   rawInput: string;
 }[] = [
   {
-    id: "khutbah-patience",
-    label: "Jumu’ah khutbah about patience",
+    id: "use-khutbah",
+    buttonLabel: "📖 From today's khutbah",
     noteType: "khutbah",
     rawInput: `Rough notes from today's khutbah:
 - Khateeb tied patience to tawakkul — not giving up effort
@@ -17,8 +17,8 @@ export const NEW_NOTE_EXAMPLES: readonly {
 - Small action: pause before reacting when stressed at work`,
   },
   {
-    id: "lecture-gratitude",
-    label: "Islamic lecture about gratitude",
+    id: "use-lecture",
+    buttonLabel: "🎧 From a lecture",
     noteType: "lecture",
     rawInput: `Lecture on shukr — my messy notes:
 - Gratitude isn't only when life is easy
@@ -27,23 +27,23 @@ export const NEW_NOTE_EXAMPLES: readonly {
 - Tied to family — be present with parents without phones`,
   },
   {
-    id: "quran-consistency",
-    label: "Quran reflection on consistency",
+    id: "use-quran",
+    buttonLabel: "📿 From Qur'an reflection",
     noteType: "quran_reflection",
     rawInput: `Personal reflection — not a tafsir session:
+- Ayah on my mind: consistency and not despairing of Allah's mercy
 - I keep dropping Quran time when work gets busy
 - Want something sustainable, not heroic goals
-- Theme in my head: small consistent steps beat occasional big bursts
 - Question for myself: what 10 min habit can I protect?`,
   },
   {
-    id: "halaqa-character",
-    label: "Halaqa notes on character",
-    noteType: "halaqa",
-    rawInput: `Weekly halaqa — adab and lowering the voice
-- Discussion on gentle speech with family
-- Someone shared avoiding sarcasm that hurts
-- Homework: one conversation this week with full attention, no interrupting
-- Reminder: husn al-dhann when annoyed`,
+    id: "use-clarity",
+    buttonLabel: "🧠 Something on your mind",
+    noteType: "personal_reminder",
+    rawInput: `Brain dump — help me find clarity:
+- Mind feels pulled between work, family, and deen
+- I want salah to feel less rushed this week
+- Tone at home: gentler, less sharp when I'm tired
+- One conversation I've been avoiding — want to approach it with adab`,
   },
-];
+] as const;
