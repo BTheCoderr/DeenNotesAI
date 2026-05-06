@@ -4,9 +4,7 @@ import { z } from "zod";
 import { generateNoteFromRaw } from "@/lib/ai";
 import { APP_DISCLAIMER, NOTE_TYPE_LABELS } from "@/lib/constants";
 import type { NoteTypeEnum } from "@/lib/database.types";
-import {
-  createSupabaseApiRouteContext,
-} from "@/lib/supabase/api-route";
+import { corsHeadersForMobileApi, getSupabaseAndUserForApi } from "@/lib/supabase/mobile-bearer-client";
 
 const SESSION_ERROR = "Your session expired. Please sign in again.";
 
@@ -30,6 +28,7 @@ function logApiAuthDebug(
   request: NextRequest,
   hasUser: boolean,
   hasAuthCookies: boolean,
+  bearer: boolean,
 ) {
   if (process.env.NODE_ENV !== "development") return;
   console.log("[deennotes api auth]", {
@@ -37,26 +36,46 @@ function logApiAuthDebug(
     pathname: request.nextUrl.pathname,
     hasUser,
     hasAuthCookies,
+    bearer,
+  });
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeadersForMobileApi(request),
   });
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, hasAuthCookies } = await createSupabaseApiRouteContext();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const cors = corsHeadersForMobileApi(request);
+  const bearer =
+    Boolean(request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim()) ||
+    false;
 
-  logApiAuthDebug("POST /api/generate-note", request, Boolean(user), hasAuthCookies);
+  let supabase;
+  let user;
+  let hasAuthCookies = false;
 
-  if (!user) {
-    return NextResponse.json({ error: SESSION_ERROR }, { status: 401 });
+  try {
+    const ctx = await getSupabaseAndUserForApi(request);
+    supabase = ctx.supabase;
+    user = ctx.user;
+    hasAuthCookies = ctx.hasAuthCookies;
+  } catch {
+    return NextResponse.json(
+      { error: SESSION_ERROR },
+      { status: 401, headers: cors },
+    );
   }
+
+  logApiAuthDebug("POST /api/generate-note", request, Boolean(user), hasAuthCookies, bearer);
 
   let json: unknown;
   try {
     json = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400, headers: cors });
   }
 
   const parsed = bodySchema.safeParse(json);
@@ -65,7 +84,7 @@ export async function POST(request: NextRequest) {
       parsed.error.flatten().fieldErrors.noteType?.[0] ??
       parsed.error.flatten().fieldErrors.rawInput?.[0] ??
       "Invalid request";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return NextResponse.json({ error: msg }, { status: 400, headers: cors });
   }
 
   const { noteType, rawInput } = parsed.data;
@@ -78,7 +97,7 @@ export async function POST(request: NextRequest) {
     console.error(e);
     return NextResponse.json(
       { error: "We couldn't generate your note. Try again in a moment." },
-      { status: 502 },
+      { status: 502, headers: cors },
     );
   }
 
@@ -110,9 +129,9 @@ export async function POST(request: NextRequest) {
     console.error(error);
     return NextResponse.json(
       { error: "Your note was generated but could not be saved." },
-      { status: 500 },
+      { status: 500, headers: cors },
     );
   }
 
-  return NextResponse.json({ noteId: data.id });
+  return NextResponse.json({ noteId: data.id }, { headers: cors });
 }

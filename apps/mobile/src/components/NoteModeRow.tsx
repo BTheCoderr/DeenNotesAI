@@ -1,7 +1,19 @@
+import { Ionicons } from "@expo/vector-icons";
+import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { NoteModeContract } from "../contracts/note-modes";
-import { border, bronze, cardBg, emerald, fontSizes, ink, muted, radii, spacing } from "../theme";
+import type { NoteModeContract, NoteModeId } from "../contracts/note-modes";
+import { border, bronze, cardBg, fontSizes, ink, muted, radii, spacing } from "../theme";
+
+const ICON_BY_MODE: Record<NoteModeId, ComponentProps<typeof Ionicons>["name"]> = {
+  record_khutbah: "mic-outline",
+  paste_notes: "document-text-outline",
+  quran_reflection: "book-outline",
+  upload_audio: "musical-notes-outline",
+  youtube_lecture: "logo-youtube",
+  upload_pdf: "document-attach-outline",
+  personal_reminder: "bulb-outline",
+};
 
 type Props = {
   item: NoteModeContract;
@@ -9,6 +21,8 @@ type Props = {
 };
 
 export function NoteModeRow({ item, onPress }: Props) {
+  const ion = ICON_BY_MODE[item.id];
+
   return (
     <Pressable
       onPress={() => onPress(item)}
@@ -16,7 +30,7 @@ export function NoteModeRow({ item, onPress }: Props) {
     >
       <View style={styles.row}>
         <View style={styles.iconBox}>
-          <Text style={styles.iconTxt}>{item.iconHint.slice(0, 1).toUpperCase()}</Text>
+          <Ionicons name={ion} size={26} color={bronze} />
         </View>
         <View style={styles.body}>
           <View style={styles.titleRow}>
@@ -54,7 +68,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconTxt: { fontSize: fontSizes.lg, fontWeight: "700", color: bronze },
   body: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.xs },
   title: { fontSize: fontSizes.md, fontWeight: "700", color: ink },

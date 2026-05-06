@@ -84,7 +84,7 @@ export function SurahListScreen() {
             structured to mirror future mobile parity.
           </p>
           <Link
-            href="/app/quran/settings/translation"
+            href="/app/quran/settings"
             className="mt-4 inline-flex text-xs font-bold text-accent underline-offset-4 hover:underline"
           >
             Quran preferences →

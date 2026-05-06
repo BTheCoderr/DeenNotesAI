@@ -47,7 +47,7 @@ export function DesktopAppNav() {
               onClick={() => openNewNoteMenu()}
               className="rounded-full px-4 py-2 text-left bg-accent text-white hover:bg-accent-hover transition-colors font-semibold shadow-sm"
             >
-              New reflection
+              New
             </button>
           );
         }

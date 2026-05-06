@@ -14,7 +14,7 @@ export type NoteModeContract = {
   enabled: boolean;
   iconHint: string;
   routeQuery: { key: "mode"; value: NoteModeId };
-  noteType?: "quran_reflection" | "personal_reminder";
+  noteType?: "quran_reflection" | "personal_reminder" | "khutbah";
   comingSoon: boolean;
 };
 
@@ -27,7 +27,8 @@ export const NOTE_MODE_CONTRACTS: readonly NoteModeContract[] = [
     iconHint: "mic",
     enabled: true,
     routeQuery: { key: "mode", value: "record_khutbah" },
-    comingSoon: true,
+    noteType: "khutbah",
+    comingSoon: false,
   },
   {
     id: "paste_notes",

@@ -49,6 +49,50 @@ export type PrayerTimingsError = {
 
 export type PrayerTodayResponse = PrayerTodayPayload | PrayerTimingsError;
 
+export type PrayerCalendarDayDto = {
+  gregorianReadable: string;
+  hijriLabel: string;
+  hijriMonthNum?: number;
+  hijriDay?: number;
+  hijriYear?: string;
+  timings: Record<PrayerName, string>;
+  timingsIso?: Partial<Record<PrayerName, string>>;
+  hijriHolidays?: string[];
+};
+
+export type PrayerCalendarPayload = {
+  ok: true;
+  locationLabel: string;
+  year: number;
+  month: number;
+  timezone?: string;
+  days: PrayerCalendarDayDto[];
+};
+
+export type PrayerRamadanOk = {
+  ok: true;
+  hijriYear: number;
+  gregorianMonth: number | null;
+  gregorianYear: number | null;
+  hijriRamadan: {
+    hijriStartMonth?: number;
+    hijriStartDay?: number;
+    hijriEndMonth?: number;
+    hijriEndDay?: number;
+    gregorianStart?: string;
+    gregorianEnd?: string;
+  } | null;
+  gregorianOverlap: {
+    month?: number;
+    year?: number;
+    [k: string]: unknown;
+  } | null;
+};
+
+export type PrayerRamadanResponse =
+  | PrayerRamadanOk
+  | { ok: false; error: string; code?: string };
+
 export type Chapter = {
   id: number;
   versesCount: number;
@@ -61,6 +105,43 @@ export type Chapter = {
 };
 
 export type ChaptersResponse = { chapters: Chapter[] };
+
+/** Mirrors web `VerseDto` shape returned by `/api/quran/chapters/[id]/verses`. */
+export type VerseTranslationDto = {
+  text: string;
+  resourceId?: number;
+  resourceName?: string;
+  languageName?: string;
+};
+
+export type VerseDto = {
+  id: number;
+  verseNumber: number;
+  verseKey: string;
+  chapterId: number;
+  textUthmani: string;
+  textImlaei?: string;
+  translations: VerseTranslationDto[];
+  tafsirs?: { text: string; resourceId?: number; resourceName?: string }[];
+};
+
+export type ChapterVersesResponse = { verses: VerseDto[] };
+
+export type VerseAudioApiResponse = {
+  verseKey: string;
+  reciterId: string;
+  audioUrl: string;
+  format?: string;
+};
+
+export type RecitationResourceDto = {
+  id: number;
+  reciterName?: string;
+  style?: string;
+  translatedName?: string;
+};
+
+export type RecitationsListResponse = { recitations: RecitationResourceDto[] };
 
 export type QuranPublicApiMeta = {
   servingMode: string;

@@ -37,7 +37,7 @@ export const APP_PRIMARY_NAV_ITEMS: AppNavItem[] = [
   {
     kind: "fab",
     label: PRIMARY_TAB_CONTRACT[2].label,
-    ariaLabel: "New reflection",
+    ariaLabel: "New",
   },
   {
     kind: "link",

@@ -1,10 +1,10 @@
 export const ONBOARDING_INTENTIONS = [
-  { id: "khutbah_notes", label: "khutbah notes" },
-  { id: "quran_reflection", label: "Quran reflection" },
-  { id: "prayer_consistency", label: "prayer consistency" },
-  { id: "halaqa_class_notes", label: "halaqa/class notes" },
+  { id: "khutbah_notes", label: "Khutbah notes" },
+  { id: "quran_reflection", label: "Qur'an reflection" },
+  { id: "prayer_consistency", label: "Prayer consistency" },
+  { id: "halaqa_class_notes", label: "Halaqa / class notes" },
   { id: "ramadan_preparation", label: "Ramadan preparation" },
-  { id: "reconnect_spiritually", label: "reconnect spiritually" },
+  { id: "reconnect_spiritually", label: "Reconnect spiritually" },
 ] as const;
 
 export type OnboardingIntentionId = (typeof ONBOARDING_INTENTIONS)[number]["id"];
@@ -14,6 +14,7 @@ export type OnboardingStepId =
   | "intentions"
   | "quran_language"
   | "reflection_language"
+  | "permissions_framing"
   | "completion";
 
 export type OnboardingStepContract = {
@@ -26,33 +27,41 @@ export type OnboardingStepContract = {
 export const ONBOARDING_STEPS: readonly OnboardingStepContract[] = [
   {
     id: "welcome",
-    title: "Welcome to DeenNotes",
-    description: "Capture what benefits your heart and revisit it with calm structure.",
-    emotionalPrompt: "Start gently; consistency matters more than intensity.",
+    title: "Welcome",
+    description: "Capture what benefits your heart — with calm structure when you return.",
+    emotionalPrompt: "Start small. Steadiness matters more than intensity.",
   },
   {
     id: "intentions",
-    title: "Set your intention",
-    description: "Choose what you want help remembering and applying.",
-    emotionalPrompt: "Let this be a tool for steady, sincere growth.",
+    title: "Your intention",
+    description: "Tap the purposes that feel close to you — you can change later.",
+    emotionalPrompt: "Honest choices, not a checklist.",
   },
   {
     id: "quran_language",
-    title: "Choose Quran meaning language",
-    description: "Pick a translation key that reads naturally beside Arabic.",
-    emotionalPrompt: "Read slowly, reflect deeply, return often.",
+    title: "Meaning beside Arabic",
+    description: "Pick a language key for Qur'an meaning — it reads next to the Arabic in the reader.",
+    emotionalPrompt: "Read slowly. Return often.",
   },
   {
     id: "reflection_language",
-    title: "Choose reflection language",
-    description: "Set your personal reflection language for prompts and summaries.",
-    emotionalPrompt: "Use the language that helps your heart stay present.",
+    title: "Reflection language",
+    description: "When you write or generate notes, prompts follow this tongue — separate from the Arabic revelation.",
+    emotionalPrompt: "Pick what keeps you inwardly present.",
+  },
+  {
+    id: "permissions_framing",
+    title: "If the phone asks permission",
+    description:
+      "Location is only to align prayer times to where you are. Notifications are optional nudges. Microphone is only if you record a khutbah — nothing uploads until you attach it.",
+    emotionalPrompt: "Not now is a valid answer — the rest of the app still opens gently.",
   },
   {
     id: "completion",
-    title: "You're ready",
-    description: "Begin with Today, then Reflect and Quran as your daily rhythm.",
-    emotionalPrompt: "Small faithful steps become lasting transformation.",
+    title: "You're settled in",
+    description:
+      "You’ll open to Today — prayer rhythm first, then Quran and reflection when you’re ready.",
+    emotionalPrompt: "Peaceful pacing beats rushing through every feature.",
   },
 ] as const;
 

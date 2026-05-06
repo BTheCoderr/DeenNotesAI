@@ -7,7 +7,6 @@ const LINKS: { href: string; label: string }[] = [
   { href: "/app/prayer", label: "Today" },
   { href: "/app/prayer/ramadan", label: "Ramadan" },
   { href: "/app/prayer/calendar", label: "Calendar" },
-  { href: "/app/prayer/settings", label: "Settings" },
 ];
 
 export function PrayerSubnav() {

@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
@@ -7,6 +6,12 @@ import {
   PRAYER_SPECIAL_REMINDERS,
   REMINDER_OFFSETS_MINUTES,
 } from "../contracts/prayer-preferences";
+import { bumpPrayerNotificationSchedule } from "../lib/notifications/prayer-schedule-signal";
+import {
+  readMobileReminderPrefs,
+  writeMobileReminderPrefs,
+  type MobileReminderPrefsState,
+} from "../lib/prayer-reminder-storage";
 import {
   border,
   bronze,
@@ -19,33 +24,6 @@ import {
   spacing,
   stone,
 } from "../theme";
-
-const STORAGE_KEY = "deennotes.mobile.prayer.reminders.v1";
-
-export type MobileReminderPrefsState = {
-  leadMinutes: (typeof REMINDER_OFFSETS_MINUTES)[number];
-  prayers: Record<(typeof PRAYER_REMINDER_PRAYERS)[number], boolean>;
-  jumuah: boolean;
-  suhoor: boolean;
-  iftar: boolean;
-};
-
-const defaultPrayers = (): MobileReminderPrefsState["prayers"] => ({
-  fajr: false,
-  dhuhr: false,
-  asr: false,
-  maghrib: false,
-  isha: false,
-});
-
-export const DEFAULT_REMINDER_PREFS: MobileReminderPrefsState = {
-  leadMinutes: 10,
-  prayers: defaultPrayers(),
-  jumuah: false,
-  suhoor: false,
-  iftar: false,
-};
-
 function labelPrayer(k: string): string {
   return k.slice(0, 1).toUpperCase() + k.slice(1);
 }
@@ -57,58 +35,38 @@ function labelSpecial(k: string): string {
   return k;
 }
 
-async function loadPrefs(): Promise<MobileReminderPrefsState> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_REMINDER_PREFS, prayers: defaultPrayers() };
-    const o = JSON.parse(raw) as Partial<MobileReminderPrefsState>;
-    const lead = Number(o.leadMinutes);
-    const leadMinutes = REMINDER_OFFSETS_MINUTES.includes(
-      lead as MobileReminderPrefsState["leadMinutes"],
-    )
-      ? (lead as MobileReminderPrefsState["leadMinutes"])
-      : DEFAULT_REMINDER_PREFS.leadMinutes;
-    const prayers = { ...defaultPrayers(), ...o.prayers };
-    return {
-      leadMinutes,
-      prayers,
-      jumuah: Boolean(o.jumuah),
-      suhoor: Boolean(o.suhoor),
-      iftar: Boolean(o.iftar),
-    };
-  } catch {
-    return { ...DEFAULT_REMINDER_PREFS, prayers: defaultPrayers() };
-  }
-}
-
-async function savePrefs(next: MobileReminderPrefsState) {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-}
-
-export function PrayerReminderPrefs() {
+export function PrayerReminderPrefs({ onAfterChange }: { onAfterChange?: () => void }) {
   const [prefs, setPrefs] = useState<MobileReminderPrefsState | null>(null);
 
   useEffect(() => {
-    void loadPrefs().then(setPrefs);
+    void readMobileReminderPrefs().then(setPrefs);
   }, []);
 
-  const persist = useCallback((next: MobileReminderPrefsState) => {
-    setPrefs(next);
-    void savePrefs(next);
-  }, []);
+  const persist = useCallback(
+    (next: MobileReminderPrefsState) => {
+      setPrefs(next);
+      void writeMobileReminderPrefs(next).then(() => {
+        bumpPrayerNotificationSchedule();
+        onAfterChange?.();
+      });
+    },
+    [onAfterChange],
+  );
 
   if (!prefs) {
     return (
       <View style={styles.card}>
-        <Text style={styles.muted}>Loading reminder preferences…</Text>
+        <Text style={styles.muted}>Waking reminder preferences gently…</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.card}>
-      <Text style={styles.h2}>Reminder preferences</Text>
-      <Text style={styles.caption}>Local only until native notifications (M4).</Text>
+      <Text style={styles.h2}>Notification preferences</Text>
+      <Text style={styles.caption}>
+        Calm local reminders only — synced with salah times from AlAdhan for this locality.
+      </Text>
 
       <Text style={styles.sub}>Lead time</Text>
       <View style={styles.chips}>
@@ -116,18 +74,10 @@ export function PrayerReminderPrefs() {
           <Pressable
             key={m}
             onPress={() => persist({ ...prefs, leadMinutes: m })}
-            style={[
-              styles.chip,
-              prefs.leadMinutes === m && styles.chipActive,
-            ]}
+            style={[styles.chip, prefs.leadMinutes === m && styles.chipActive]}
           >
-            <Text
-              style={[
-                styles.chipTxt,
-                prefs.leadMinutes === m && styles.chipTxtActive,
-              ]}
-            >
-              {m === 0 ? "At time" : `${m}m`}
+            <Text style={[styles.chipTxt, prefs.leadMinutes === m && styles.chipTxtActive]}>
+              {m === 0 ? "At time" : `${m}m before`}
             </Text>
           </Pressable>
         ))}
@@ -153,11 +103,7 @@ export function PrayerReminderPrefs() {
       <Text style={styles.sub}>Special</Text>
       {PRAYER_SPECIAL_REMINDERS.map((k) => {
         const val =
-          k === "jumuah"
-            ? prefs.jumuah
-            : k === "suhoor"
-              ? prefs.suhoor
-              : prefs.iftar;
+          k === "jumuah" ? prefs.jumuah : k === "suhoor" ? prefs.suhoor : prefs.iftar;
         return (
           <View key={k} style={styles.row}>
             <Text style={styles.rowLabel}>{labelSpecial(k)}</Text>

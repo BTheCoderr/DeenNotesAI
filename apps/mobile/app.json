@@ -11,15 +11,20 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F6F4F0"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "io.deennotes.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
+      "package": "io.deennotes.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F6F4F0"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -29,13 +34,27 @@
     },
     "plugins": [
       "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "DeenNotes uses your location to calculate prayer times for where you are."
+        }
+      ],
       [
         "expo-notifications",
         {
           "sounds": [],
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "DeenNotes needs microphone access to record khutbah and reminders on this device only. Audio stays local unless you attach it to a reflection."
+        }
+      ],
+      "@sentry/react-native"
     ]
   }
 }

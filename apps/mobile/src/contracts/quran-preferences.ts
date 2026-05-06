@@ -14,8 +14,18 @@ export type ReflectionLanguageCode =
 export type QuranPreferenceContract = {
   translationKey?: string;
   tafsirId?: number;
+  /** Quran.com-style recitation resource id; defaults via server proxy if unset. */
   reciterId?: string;
   language?: ReflectionLanguageCode;
   offlineIntent: "none" | "planned" | "downloading" | "ready";
   immersiveReading: boolean;
+  /** When true, verse audio caches only fetch on unmetered (Wi‑Fi where detectable). */
+  audioWifiOnly?: boolean;
+  /** Max approximate storage for verse audio (~MB); LRU eviction. */
+  audioMaxCacheMb?: number;
+  /** When online, softly prefetch audio for continue-reading surah (never full Quran). */
+  autoDownloadContinueSurah?: boolean;
+  /** Placeholder until server exposes multiple bitrate selections. */
+  audioQuality?: "default" | "high";
 };
+

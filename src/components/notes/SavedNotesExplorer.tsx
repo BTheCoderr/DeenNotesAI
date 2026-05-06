@@ -25,28 +25,35 @@ type Props = {
   loadError?: boolean;
 };
 
+const RECENT_CAP = 8;
+
+type LibraryTab = "recent" | "all" | "folders";
+
 export function SavedNotesExplorer({ notes, loadError }: Props) {
-  const [tab, setTab] = useState<"all" | "folders">("all");
+  const [tab, setTab] = useState<LibraryTab>("recent");
   const { openNewNoteMenu } = useNewNoteMenu();
 
   if (loadError) {
     return (
       <div>
-        <h1 className="font-display text-3xl font-semibold text-ink">Saved notes</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">Reflect</h1>
         <p className="mt-6 text-red-700 bg-red-50 rounded-xl px-4 py-3">
-          We couldn&apos;t load your notes. Refresh and try again.
+          We couldn&apos;t load your reflections. Refresh and try again.
         </p>
       </div>
     );
   }
 
+  const recentNotes = notes.slice(0, RECENT_CAP);
+  const listNotes = tab === "recent" ? recentNotes : notes;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-ink">Saved notes</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">Reflect</h1>
           <p className="text-muted mt-2 max-w-prose leading-relaxed text-sm">
-            Reflection and organization—not rulings or fatwas.
+            Saved reflections and notes — not rulings or fatwas.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
@@ -55,7 +62,7 @@ export function SavedNotesExplorer({ notes, loadError }: Props) {
             onClick={() => openNewNoteMenu()}
             className="inline-flex rounded-full bg-accent text-white text-sm font-semibold px-5 py-2.5 hover:bg-accent-hover transition-colors"
           >
-            New DeenNote
+            New
           </button>
           <BetaFeedbackCta className="text-sm font-semibold text-accent hover:underline shrink-0" />
         </div>
@@ -64,13 +71,23 @@ export function SavedNotesExplorer({ notes, loadError }: Props) {
       <div className="flex gap-2 p-1 rounded-2xl bg-mint/30 border border-black/6">
         <button
           type="button"
+          onClick={() => setTab("recent")}
+          className={cn(
+            "flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors",
+            tab === "recent" ? "bg-surface shadow-sm text-ink" : "text-muted hover:text-ink",
+          )}
+        >
+          Recent
+        </button>
+        <button
+          type="button"
           onClick={() => setTab("all")}
           className={cn(
             "flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors",
             tab === "all" ? "bg-surface shadow-sm text-ink" : "text-muted hover:text-ink",
           )}
         >
-          All
+          All notes
         </button>
         <button
           type="button"
@@ -90,7 +107,7 @@ export function SavedNotesExplorer({ notes, loadError }: Props) {
         <div className="rounded-3xl border border-dashed border-black/12 bg-surface px-6 py-16 text-center shadow-sm">
           <p className="font-display text-xl font-semibold text-ink">Folders</p>
           <p className="text-muted text-sm mt-3 max-w-sm mx-auto leading-relaxed">
-            Organize khutbah, lecture, and halaqa notes into folders—coming soon.
+            Organize khutbah, lecture, and halaqa notes into folders — coming soon.
           </p>
         </div>
       ) : notes.length === 0 ? (
@@ -122,9 +139,13 @@ export function SavedNotesExplorer({ notes, loadError }: Props) {
         </div>
       ) : (
         <>
-          <p className="text-sm text-muted">{notes.length} notes</p>
+          <p className="text-sm text-muted">
+            {tab === "recent"
+              ? `${recentNotes.length} recent`
+              : `${notes.length} total`}
+          </p>
           <ul className="space-y-3 pb-24">
-            {notes.map((n) => {
+            {listNotes.map((n) => {
               const preview =
                 (typeof n.short_summary === "string" && n.short_summary.trim()) ||
                 (n.summary && n.summary.trim()) ||

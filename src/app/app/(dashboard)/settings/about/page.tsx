@@ -3,7 +3,7 @@ import Link from "next/link";
 import { APP_DISCLAIMER } from "@/lib/constants";
 
 export const metadata = {
-  title: "About — DeenNotes",
+  title: "About DeenNotes — Settings",
 };
 
 export default function AboutSettingsPage() {
@@ -16,7 +16,7 @@ export default function AboutSettingsPage() {
         >
           ← Settings
         </Link>
-        <h1 className="font-display text-3xl font-semibold text-ink">About</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">About DeenNotes</h1>
         <p className="text-accent text-xs font-semibold uppercase tracking-wider mt-2">
           Beta — DeenNotes AI
         </p>

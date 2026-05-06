@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 88" fill="none" role="img" aria-label="DeenNotes AI primary wordmark">
+  <defs>
+    <linearGradient id="wordmarkTaper" x1="0" y1="0" x2="360" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#127A63" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#127A63" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#127A63" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <text
+    x="0"
+    y="46"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="40"
+    font-weight="600"
+    fill="#127A63"
+  >DeenNotes</text>
+  <text
+    x="278"
+    y="46"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="15"
+    font-weight="300"
+    letter-spacing="0.16em"
+    fill="#127A63"
+  >AI</text>
+  <ellipse cx="180" cy="74" rx="150" ry="3" fill="url(#wordmarkTaper)"/>
+</svg>

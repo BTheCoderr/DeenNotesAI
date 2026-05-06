@@ -1,31 +1,66 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  UIManager,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { MobileWordmark } from "../src/components/brand/MobileWordmark";
 import {
   ONBOARDING_INTENTIONS,
-  type OnboardingIntentionId,
   ONBOARDING_STEPS,
-} from "../../../src/shared/onboarding";
-import { DEENNOTES_SAFETY_DISCLAIMER } from "../../../src/shared/safety-copy";
-import { border, bronze, cardBg, emerald, fontSizes, ink, muted, radii, spacing, stone } from "../src/theme";
+  type OnboardingAnswersContract,
+  type OnboardingIntentionId,
+} from "../src/contracts/onboarding";
+import { REFLECTION_LANGUAGE_OPTIONS } from "../src/contracts/quran-preferences";
+import type { ReflectionLanguageCode } from "../src/contracts/quran-preferences";
+import { DEENNOTES_SAFETY_DISCLAIMER } from "../src/contracts/safety-copy";
+import {
+  border,
+  bronze,
+  cardBg,
+  emerald,
+  fontSerifHeading,
+  fontSizes,
+  ink,
+  muted,
+  radii,
+  spacing,
+  stone,
+} from "../src/theme";
 
+import {
+  writeMobileQuranPrefs,
+} from "../src/lib/mobile-quran-prefs";
 const DONE_KEY = "deennotes.mobile.onboarding.v1";
+const ANSWERS_KEY = "deennotes.mobile.onboarding.answers.v1";
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [intentions, setIntentions] = useState<Set<OnboardingIntentionId>>(new Set());
+  const [quranLang, setQuranLang] = useState<ReflectionLanguageCode>("en");
+  const [reflectionLang, setReflectionLang] = useState<ReflectionLanguageCode>("en");
 
+  useEffect(() => {
+    if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  function go(delta: number) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStepIndex((i) => Math.max(0, Math.min(ONBOARDING_STEPS.length - 1, i + delta)));
+  }
   const step = ONBOARDING_STEPS[stepIndex];
 
   function toggleIntention(id: OnboardingIntentionId) {
@@ -38,19 +73,32 @@ export default function OnboardingScreen() {
   }
 
   async function finish() {
+    const answers: OnboardingAnswersContract = {
+      journeyGoals: [...intentions],
+      preferredQuranEncTranslationKey: quranLang,
+      reflectionLanguage: reflectionLang,
+      completedAt: new Date().toISOString(),
+    };
     await AsyncStorage.setItem(DONE_KEY, "1");
-    await AsyncStorage.setItem(
-      "deennotes.mobile.onboarding.intentions.v1",
-      JSON.stringify([...intentions]),
-    );
-    router.replace("/");
+    await AsyncStorage.setItem(ANSWERS_KEY, JSON.stringify(answers));
+    await writeMobileQuranPrefs({
+      language: reflectionLang,
+      translationKey: quranLang,
+    });
+    router.replace("/(tabs)");
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        <MobileWordmark height={30} padded style={{ alignSelf: "flex-start", marginBottom: spacing.sm }} />
         <Text style={styles.dots}>
           {stepIndex + 1} / {ONBOARDING_STEPS.length}
+        </Text>
+        <Text style={styles.stepFoot}>
+          {stepIndex === 0
+            ? "Tap Back to open Today — we'll save gentle defaults; you can change them in Settings anytime."
+            : "You can go Back anytime — nothing here is scored or required."}
         </Text>
         <Text style={styles.title}>{step.title}</Text>
         <Text style={styles.prompt}>{step.emotionalPrompt}</Text>
@@ -65,48 +113,110 @@ export default function OnboardingScreen() {
                   key={opt.id}
                   onPress={() => toggleIntention(opt.id)}
                   style={[styles.chip, on && styles.chipOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
                 >
                   <Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{opt.label}</Text>
                 </Pressable>
               );
             })}
+            <Text style={styles.chipHint}>Tap what resonates — skipping all is fine.</Text>
           </View>
         ) : null}
 
-        {(step.id === "quran_language" || step.id === "reflection_language") && (
-          <View style={styles.placeholder}>
-            <Text style={styles.muted}>
-              Language pickers will load the same catalogs as the web app in a later milestone.
-              For now, continue when you’re ready.
-            </Text>
+        {step.id === "quran_language" ? (
+          <View style={styles.card}>
+            <Text style={styles.muted}>Stored locally as a gentle default beside Arabic.</Text>
+            <View style={styles.langChips}>
+              {REFLECTION_LANGUAGE_OPTIONS.map((opt) => {
+                const on = quranLang === opt.code;
+                return (
+                  <Pressable
+                    key={opt.code}
+                    onPress={() => setQuranLang(opt.code)}
+                    style={[styles.chip, on && styles.chipOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                  >
+                    <Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        )}
+        ) : null}
 
-        <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerTxt}>{DEENNOTES_SAFETY_DISCLAIMER}</Text>
-        </View>
+        {step.id === "reflection_language" ? (
+          <View style={styles.card}>
+            <Text style={styles.muted}>Separate from Qur&apos;an Arabic.</Text>
+            <View style={styles.langChips}>
+              {REFLECTION_LANGUAGE_OPTIONS.map((opt) => {
+                const on = reflectionLang === opt.code;
+                return (
+                  <Pressable
+                    key={`r-${opt.code}`}
+                    onPress={() => setReflectionLang(opt.code)}
+                    style={[styles.chip, on && styles.chipOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                  >
+                    <Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+
+        {step.id === "completion" ? (
+          <>
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>You&apos;re landing on Today first</Text>
+              <Text style={styles.successBody}>
+                Prayer rhythm shows at the top — Qur&apos;an and reflection stay one tap away when you want them.
+              </Text>
+            </View>
+            <View style={styles.disclaimer}>
+              <Text style={styles.disclaimerTxt}>{DEENNOTES_SAFETY_DISCLAIMER}</Text>
+            </View>
+          </>
+        ) : (
+          <View style={{ marginBottom: spacing.md }} />
+        )}
 
         <View style={styles.actions}>
           {stepIndex > 0 ? (
             <Pressable
-              onPress={() => setStepIndex((i) => i - 1)}
+              onPress={() => go(-1)}
               style={styles.secondary}
+              accessibilityRole="button"
+              accessibilityLabel="Previous onboarding step"
             >
               <Text style={styles.secondaryTxt}>Back</Text>
             </Pressable>
           ) : (
-            <View style={styles.secondary} />
+            <Pressable
+              onPress={() => void finish()}
+              style={styles.secondary}
+              accessibilityRole="button"
+              accessibilityLabel="Leave onboarding and open Today with defaults"
+              accessibilityHint="Saves sensible language defaults and opens the Today tab."
+            >
+              <Text style={styles.secondaryTxt}>Back</Text>
+            </Pressable>
           )}
           {stepIndex < ONBOARDING_STEPS.length - 1 ? (
-            <Pressable
-              onPress={() => setStepIndex((i) => i + 1)}
-              style={styles.primary}
-            >
+            <Pressable onPress={() => go(1)} style={styles.primary} accessibilityRole="button">
               <Text style={styles.primaryTxt}>Continue</Text>
             </Pressable>
           ) : (
-            <Pressable onPress={() => void finish()} style={styles.primary}>
-              <Text style={styles.primaryTxt}>Enter DeenNotes</Text>
+            <Pressable
+              onPress={() => void finish()}
+              style={styles.primary}
+              accessibilityRole="button"
+              accessibilityLabel="Finish onboarding"
+            >
+              <Text style={styles.primaryTxt}>Go to Today</Text>
             </Pressable>
           )}
         </View>
@@ -123,9 +233,21 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: bronze,
     letterSpacing: 2,
+    marginBottom: spacing.xs,
+  },
+  stepFoot: {
+    fontSize: fontSizes.sm,
+    color: muted,
+    lineHeight: 20,
     marginBottom: spacing.sm,
   },
-  title: { fontSize: 28, fontWeight: "800", color: ink, marginBottom: spacing.sm },
+  title: {
+    fontFamily: fontSerifHeading,
+    fontSize: 28,
+    fontWeight: "600",
+    color: ink,
+    marginBottom: spacing.sm,
+  },
   prompt: {
     fontSize: fontSizes.md,
     color: emerald,
@@ -135,6 +257,14 @@ const styles = StyleSheet.create({
   },
   body: { fontSize: fontSizes.md, color: muted, lineHeight: 22, marginBottom: spacing.lg },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
+  chipHint: {
+    width: "100%",
+    fontSize: fontSizes.sm,
+    color: muted,
+    lineHeight: 20,
+    marginTop: -spacing.xs,
+  },
+  langChips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
   chip: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -151,15 +281,32 @@ const styles = StyleSheet.create({
   },
   chipTxt: { fontSize: fontSizes.md, color: ink, fontWeight: "600" },
   chipTxtOn: { color: emerald },
-  placeholder: {
+  card: {
     padding: spacing.md,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: border,
     backgroundColor: cardBg,
     marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
   muted: { fontSize: fontSizes.sm, color: muted, lineHeight: 20 },
+  successCard: {
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: "rgba(18,122,99,0.25)",
+    backgroundColor: "rgba(18,122,99,0.08)",
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  successTitle: {
+    fontFamily: fontSerifHeading,
+    fontSize: fontSizes.lg,
+    fontWeight: "600",
+    color: ink,
+  },
+  successBody: { fontSize: fontSizes.sm, color: muted, lineHeight: 22 },
   disclaimer: { marginVertical: spacing.lg },
   disclaimerTxt: { fontSize: fontSizes.xs, color: muted, lineHeight: 18 },
   actions: {

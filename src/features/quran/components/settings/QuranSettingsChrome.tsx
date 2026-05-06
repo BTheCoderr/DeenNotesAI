@@ -4,6 +4,7 @@ import { APP_DISCLAIMER } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
+  { href: "/app/quran/settings", label: "Overview" },
   { href: "/app/quran/settings/translation", label: "Translation" },
   { href: "/app/quran/settings/tafsir", label: "Tafsir" },
   { href: "/app/quran/settings/reciter", label: "Reciter" },

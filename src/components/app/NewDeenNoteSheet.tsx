@@ -48,7 +48,7 @@ export function NewDeenNoteSheet({ open, onOpenChange }: Props) {
             id="new-deennote-title"
             className="font-display text-[1.35rem] font-semibold text-[#2C2419] text-center tracking-tight"
           >
-            New DeenNote
+            New
           </h2>
           <p className="text-[0.75rem] text-muted text-center px-5 leading-relaxed">
             Quran-centered journaling — khutbah, halaqa, Qur’an reflection, dua nudges, and Ramadan

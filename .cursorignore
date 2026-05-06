@@ -1,0 +1,5 @@
+# Keep local secrets out of Cursor codebase indexing / default context (in addition to .gitignore).
+.env
+.env.*
+!.env.example
+

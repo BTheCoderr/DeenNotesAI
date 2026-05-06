@@ -12,9 +12,25 @@ const brandDir = path.join(root, "public", "brand");
 const outDir = path.join(root, "apps", "mobile", "assets");
 
 const ICON = path.join(brandDir, "app-icon-dark.svg");
+const WORDMARK_COMPACT = path.join(brandDir, "wordmark-compact.svg");
+const SECONDARY_MARK = path.join(brandDir, "secondary-mark.svg");
+
+/** Matches apps/mobile splash + app chrome (Tailwind stone). */
+const STONE_SPLASH_BG = "#F6F4F0";
 
 function rasterizeSvg(svgPath, size) {
   return sharp(svgPath).resize(size, size).png({ compressionLevel: 9 });
+}
+
+async function writeWordmarkPng(sourceSvg, filename, widthPx) {
+  if (!fs.existsSync(sourceSvg)) {
+    console.warn(`Skip wordmark raster: missing ${sourceSvg}`);
+    return;
+  }
+  await sharp(sourceSvg)
+    .resize({ width: widthPx })
+    .png({ compressionLevel: 9 })
+    .toFile(path.join(outDir, filename));
 }
 
 async function main() {
@@ -38,7 +54,7 @@ async function main() {
       width: splashW,
       height: splashH,
       channels: 3,
-      background: "#ffffff",
+      background: STONE_SPLASH_BG,
     },
   })
     .composite([
@@ -53,7 +69,12 @@ async function main() {
 
   await rasterizeSvg(ICON, 48).toFile(path.join(outDir, "favicon.png"));
 
-  console.log("Wrote apps/mobile/assets/{icon,adaptive-icon,splash-icon,favicon}.png from public/brand.");
+  await writeWordmarkPng(WORDMARK_COMPACT, "wordmark-compact-mobile.png", 720);
+  await writeWordmarkPng(SECONDARY_MARK, "secondary-mark-mobile.png", 144);
+
+  console.log(
+    "Wrote apps/mobile/assets/{icon,adaptive-icon,splash-icon,favicon,wordmark-compact-mobile,secondary-mark-mobile}.png from public/brand.",
+  );
 }
 
 main().catch((err) => {

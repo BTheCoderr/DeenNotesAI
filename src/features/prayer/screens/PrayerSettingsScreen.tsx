@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { readPrayerPrefs, writePrayerPrefs } from "@/lib/browser/prayer-prefs";
 import { APP_DISCLAIMER } from "@/lib/constants";
@@ -29,6 +30,8 @@ const PRAYER_TOGGLE_ORDER: {
 ];
 
 export function PrayerSettingsScreen() {
+  const searchParams = useSearchParams();
+  const remindersAnchorRef = useRef<HTMLElement | null>(null);
   const [prefs, setPrefs] = useState(readPrayerPrefs);
   const [reminders, setReminders] = useState(readPrayerReminderPreferences);
   const [saved, setSaved] = useState(false);
@@ -42,6 +45,15 @@ export function PrayerSettingsScreen() {
       setNotifPermission(Notification.permission);
     }
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("focus") !== "reminders") return;
+    const el = remindersAnchorRef.current;
+    if (!el) return;
+    window.requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [searchParams]);
 
   const persistPrayerPrefs = useCallback((next: PrayerPrefsStored) => {
     const { notifications: _omit, ...rest } = next;
@@ -200,7 +212,11 @@ export function PrayerSettingsScreen() {
         ) : null}
       </section>
 
-      <section className="rounded-[1.35rem] border border-emerald-950/12 bg-white/85 p-5 space-y-5 shadow-sm">
+      <section
+        ref={remindersAnchorRef}
+        id="prayer-reminders"
+        className="rounded-[1.35rem] border border-emerald-950/12 bg-white/85 p-5 space-y-5 shadow-sm"
+      >
         <div className="space-y-2">
           <h2 className="font-display text-lg font-semibold text-ink">Prayer reminders</h2>
           <p className="text-xs text-muted leading-relaxed">

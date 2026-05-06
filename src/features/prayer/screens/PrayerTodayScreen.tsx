@@ -1,27 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { buildPrayerFetchQuery, type GeoPosition } from "@/features/prayer/build-prayer-fetch-query";
-import { PrayerReminderStrip } from "@/features/prayer/components/PrayerReminderStrip";
 import { PrayerRhythmPanel } from "@/features/prayer/components/PrayerRhythmPanel";
 import { PrayerTimeCard } from "@/features/prayer/components/PrayerTimeCard";
 import { readPrayerPrefs, writePrayerPrefs } from "@/lib/browser/prayer-prefs";
-import { APP_DISCLAIMER } from "@/lib/constants";
 import { readPrayerReminderPreferences } from "@/lib/prayer/reminder-preferences";
-import { formatCountdown, PRAYER_CYCLE_ORDER } from "@/lib/prayer/next-prayer-client";
+import { PRAYER_CYCLE_ORDER } from "@/lib/prayer/next-prayer-client";
 import { scheduleWebPrayerNotificationTimers } from "@/lib/prayer/web-browser-reminders";
 import type { PrayerName, PrayerTodayPayload } from "@/lib/prayer/types";
 
+function isFridayLocal(): boolean {
+  return new Date().getDay() === 5;
+}
+
+/** Today’s prayer experience: rhythm, list, dates, gentle season cards — preferences live in Settings. */
 export function PrayerTodayScreen() {
   const [prefs, setPrefs] = useState(readPrayerPrefs);
   const [geo, setGeo] = useState<GeoPosition>(null);
-  const [geoError, setGeoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<PrayerTodayPayload | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [friday, setFriday] = useState(false);
+
+  useEffect(() => {
+    setFriday(isFridayLocal());
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,103 +74,34 @@ export function PrayerTodayScreen() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const countdown = useMemo(() => {
-    const t = data?.schedule?.nextAtEpochMs;
-    if (t == null || !Number.isFinite(t)) return "—";
-    return t > now ? formatCountdown(t - now) : "—";
-  }, [data, now]);
-
-  function requestLocation() {
-    setGeoError(null);
-    if (!navigator.geolocation) {
-      setGeoError("Location is not available in this browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setGeo(position);
-        const merged = { ...prefs, useBrowserLocation: true };
-        setPrefs(merged);
-        writePrayerPrefs(merged);
-      },
-      () => {
-        setGeoError("Permission denied or unavailable — open Settings to use city instead.");
-      },
-      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 12_000 },
-    );
-  }
-
   const nextName = data?.schedule.nextPrayer;
 
   return (
     <div className="max-w-lg mx-auto space-y-6 pb-28">
-      <header className="space-y-2">
-        <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-900/80">
-          Today
-        </p>
-        <h1 className="font-display text-[1.85rem] font-semibold text-ink leading-tight">
-          Prayer times
-        </h1>
-        <p className="text-sm text-muted leading-relaxed">
-          Estimates from AlAdhan. Follow your local masjid when it matters for you.
-        </p>
-      </header>
-
-      <PrayerReminderStrip learnMoreHref="/app/prayer/settings" reuseTodayPayload={data} />
-
-      <section className="rounded-[1.35rem] border border-black/[0.06] bg-[#F9F6F1]/90 p-5 space-y-4 shadow-sm">
-        <p className="text-xs text-muted leading-relaxed">
-          {APP_DISCLAIMER} These times support reflection and scheduling — not legal validity.
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={requestLocation}
-            className="rounded-full border border-emerald-900/20 bg-emerald-950/[0.06] px-4 py-2 text-xs font-semibold text-emerald-950 hover:bg-emerald-950/10 transition-colors"
-          >
-            Use device area
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const merged = { ...prefs, useBrowserLocation: false };
-              setPrefs(merged);
-              writePrayerPrefs(merged);
-              setGeo(null);
-            }}
-            className="rounded-full border border-black/10 px-4 py-2 text-xs font-semibold text-muted hover:text-ink"
-          >
-            Prefer saved city
-          </button>
+      <header className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-900/80">
+              Prayer
+            </p>
+            <h1 className="font-display text-[1.85rem] font-semibold text-ink leading-tight">
+              Today
+            </h1>
+            <p className="text-sm text-muted leading-relaxed mt-1">
+              Estimates from AlAdhan — follow your local masjid when it matters for you.
+            </p>
+          </div>
           <Link
             href="/app/prayer/settings"
-            className="rounded-full border border-emerald-950/15 bg-white px-4 py-2 text-xs font-semibold text-emerald-950 hover:bg-stone-50"
+            className="shrink-0 rounded-full bg-emerald-950 px-4 py-2.5 text-xs font-semibold text-[#F9F6F1] hover:bg-emerald-900 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-950"
           >
-            Location &amp; method
+            Prayer preferences
           </Link>
         </div>
-        {geoError ? <p className="text-xs text-amber-800">{geoError}</p> : null}
-
-        {!prefs.useBrowserLocation ? (
-          <p className="text-sm text-muted">
-            Using <span className="font-medium text-ink">{prefs.city}</span>,{" "}
-            <span className="font-medium text-ink">{prefs.country}</span>. Change in settings.
-          </p>
-        ) : (
-          <p className="text-sm text-muted">
-            Using an approximate area from your browser. Coordinates are not stored.
-          </p>
-        )}
-      </section>
+      </header>
 
       {loading ? (
-        <p className="text-sm text-muted text-center py-8">Gathering times…</p>
+        <p className="text-sm text-muted text-center py-6">Gathering times…</p>
       ) : null}
       {err ? (
         <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
@@ -173,31 +110,38 @@ export function PrayerTodayScreen() {
       ) : null}
 
       {data?.ok ? (
-        <section className="space-y-4">
+        <>
           <PrayerRhythmPanel
             data={data}
-            momentTitle="Today's salah rhythm"
+            momentTitle="Today’s salah rhythm"
             hubLink={null}
           />
+
           {data.isRamadanDay ? (
-            <p className="text-xs text-emerald-900/80 px-1 leading-relaxed">
-              Ramadan day {data.ramadanDay ?? "—"} · take food and sleep gently.
-            </p>
+            <section className="rounded-2xl border border-emerald-950/15 bg-gradient-to-br from-emerald-950/[0.06] to-amber-100/40 px-4 py-4 space-y-1">
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-emerald-950/75">
+                Ramadan
+              </p>
+              <p className="text-sm font-semibold text-ink">
+                Ramadan day {data.ramadanDay ?? "—"}
+              </p>
+              <p className="text-xs text-muted leading-relaxed">
+                Slow your pace around food and sleep — preferences and reminders stay under Settings.
+              </p>
+            </section>
           ) : null}
 
-          <div className="rounded-2xl border border-black/[0.06] bg-white/60 px-4 py-4 space-y-2">
-            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-muted">
-              Flow
-            </p>
-            <p className="text-sm text-muted leading-relaxed">{data.schedule.currentLabel}</p>
-            <div className="flex items-baseline justify-between gap-3 pt-1">
-              <div>
-                <p className="text-[0.65rem] font-bold uppercase tracking-wide text-accent">Next</p>
-                <p className="font-display text-xl font-semibold text-ink">{data.schedule.nextPrayer}</p>
-              </div>
-              <p className="text-2xl font-semibold tabular-nums text-emerald-900">{countdown}</p>
-            </div>
-          </div>
+          {friday ? (
+            <section className="rounded-2xl border border-black/[0.06] bg-[#F9F6F1]/90 px-4 py-4 space-y-1">
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-muted">
+                Jumu&apos;ah
+              </p>
+              <p className="text-sm text-ink leading-relaxed">
+                A gentle nudge for the blessed hour — settle early, phone away, heart present. Khutbah
+                notes live under Reflect when you capture them.
+              </p>
+            </section>
+          ) : null}
 
           <ul className="space-y-2">
             {PRAYER_CYCLE_ORDER.map((name: PrayerName) => (
@@ -210,12 +154,32 @@ export function PrayerTodayScreen() {
               </li>
             ))}
           </ul>
-        </section>
+        </>
       ) : null}
 
+      <p className="text-xs text-muted leading-relaxed px-0.5">
+        <button
+          type="button"
+          className="font-semibold text-accent hover:underline"
+          onClick={() => {
+            const merged = { ...prefs, useBrowserLocation: true };
+            setPrefs(merged);
+            writePrayerPrefs(merged);
+            setGeo(null);
+            void load();
+          }}
+        >
+          Refresh with device area
+        </button>
+        {" · "}
+        <Link href="/app/prayer/settings" className="font-semibold text-accent hover:underline">
+          Change city or method
+        </Link>
+        . Defaults unset? Providence, Rhode Island.
+      </p>
+
       <footer className="text-[0.72rem] text-muted leading-relaxed pb-8">
-        Unset locations default to Providence, Rhode Island, United States. Preferences stay on this
-        device.
+        Prayer reminders and calculation details live under Settings → Prayer preferences / Prayer reminders.
       </footer>
     </div>
   );
