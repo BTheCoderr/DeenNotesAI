@@ -31,6 +31,8 @@ type Props = {
   onListenQuranEnc?: () => void;
   /** When false, hide translation-audio affordance (e.g. mock build). */
   quranEncTranslationAudioEnabled?: boolean;
+  /** When verse payload is from scaffold / graceful mock — label Arabic accordingly. */
+  reflectionScaffoldDataset?: boolean;
 };
 
 export function AyahReadingCard({
@@ -51,13 +53,21 @@ export function AyahReadingCard({
   quranEncBlock,
   onListenQuranEnc,
   quranEncTranslationAudioEnabled = true,
+  reflectionScaffoldDataset = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const translationText = verse.translations?.[0]?.text?.trim() ?? "";
   const qeText = quranEncBlock?.translation?.trim() ?? "";
+  const translationAttribution = reflectionScaffoldDataset
+    ? "Practice translation"
+    : "Quran Foundation";
 
   async function handleCopy() {
-    const chunks: string[] = [verse.textUthmani || ""];
+    const chunks: string[] = [];
+    if (reflectionScaffoldDataset) {
+      chunks.push("[Practice Arabic layout — not Qur’anic manuscript]");
+    }
+    chunks.push(verse.textUthmani || "");
     if (qeText) {
       chunks.push("", `[QuranEnc — ${quranEncBlock?.metaLine ?? "verbatim"}]`, qeText);
       if (quranEncBlock?.footnotes?.trim()) {
@@ -65,7 +75,7 @@ export function AyahReadingCard({
       }
     }
     if (translationText) {
-      chunks.push("", "[Quran Foundation]", translationText);
+      chunks.push("", `[${translationAttribution}]`, translationText);
     }
     const blob = chunks.join("\n").trim();
     try {
@@ -151,9 +161,19 @@ export function AyahReadingCard({
         </div>
       </div>
 
+      {reflectionScaffoldDataset ? (
+        <p
+          className="mt-3 rounded-xl border border-accent/18 bg-accent-soft/25 px-3 py-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-accent/95 leading-snug"
+          role="note"
+        >
+          Practice layout · Arabic below is placeholder text, not manuscript Qur’an
+        </p>
+      ) : null}
+
       <p
         className={cn(
-          "mt-4 text-right text-ink font-normal",
+          "text-right text-ink font-normal",
+          reflectionScaffoldDataset ? "mt-3" : "mt-4",
           readingMode
             ? "text-[1.44rem] sm:text-[1.58rem] leading-[2.42] tracking-[0.022em]"
             : "text-[1.2rem] sm:text-[1.35rem] leading-[2.18] tracking-[0.015em]",
@@ -192,11 +212,9 @@ export function AyahReadingCard({
           ) : null}
           {verse.translations?.[0]?.text ? (
             <div>
-              {quranEncBlock?.translation ? (
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-muted mb-1.5">
-                  Quran Foundation
-                </p>
-              ) : null}
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-muted mb-1.5">
+                {translationAttribution}
+              </p>
               <p className="text-sm leading-[1.7] text-ink/85 border-l-2 border-accent/25 pl-3">
                 {verse.translations[0].text}
               </p>

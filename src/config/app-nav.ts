@@ -1,5 +1,6 @@
 /**
- * Single source of truth for primary app navigation (web now; Expo-style tabs later).
+ * Primary app navigation — web PWA now; Expo bottom tabs later.
+ * Order: Reflect · Today · New (FAB) · Quran · Prayer
  */
 export type AppNavLinkItem = {
   kind: "link";
@@ -21,7 +22,7 @@ export const APP_PRIMARY_NAV_ITEMS: AppNavItem[] = [
   {
     kind: "link",
     href: "/app/notes",
-    label: "Notes",
+    label: "Reflect",
     matches: (pathname) =>
       pathname === "/app/notes" || pathname.startsWith("/app/notes/"),
   },
@@ -34,7 +35,7 @@ export const APP_PRIMARY_NAV_ITEMS: AppNavItem[] = [
   {
     kind: "fab",
     label: "New",
-    ariaLabel: "New DeenNote",
+    ariaLabel: "New reflection",
   },
   {
     kind: "link",
@@ -44,8 +45,8 @@ export const APP_PRIMARY_NAV_ITEMS: AppNavItem[] = [
   },
   {
     kind: "link",
-    href: "/app/settings",
-    label: "Settings",
-    matches: (pathname) => pathname.startsWith("/app/settings"),
+    href: "/app/prayer",
+    label: "Prayer",
+    matches: (pathname) => pathname.startsWith("/app/prayer"),
   },
 ];

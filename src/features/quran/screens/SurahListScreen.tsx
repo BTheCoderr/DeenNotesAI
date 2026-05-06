@@ -36,7 +36,6 @@ export function SurahListScreen() {
     chapters,
     serviceMeta,
     error,
-    errorCode,
     retryable,
     loading,
     reload,
@@ -84,6 +83,12 @@ export function SurahListScreen() {
             Immerse in Arabic typography, layered translation, tafsir, and audio—all
             structured to mirror future mobile parity.
           </p>
+          <Link
+            href="/app/quran/settings/translation"
+            className="mt-4 inline-flex text-xs font-bold text-accent underline-offset-4 hover:underline"
+          >
+            Quran preferences →
+          </Link>
           <label className="sr-only" htmlFor="surah-quran-search">
             Search surahs
           </label>
@@ -109,7 +114,6 @@ export function SurahListScreen() {
         <QuranServiceEmptyState
           description={error}
           serviceMeta={serviceMeta}
-          errorCode={errorCode}
           retryable={retryable}
           onReconnect={retryable ? () => void reload() : undefined}
         />

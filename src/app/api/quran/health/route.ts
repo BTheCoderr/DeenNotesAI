@@ -5,7 +5,7 @@ import { validateQuranEnvironment } from "@/lib/quran/env";
 export const dynamic = "force-dynamic";
 
 /**
- * Operator-facing Quran service probe — returns booleans and issue codes only (no secrets).
+ * Operator-facing Quran service probe — booleans, modes, and issue codes only (no secrets; no free-text hints).
  */
 export async function GET() {
   const report = validateQuranEnvironment();
@@ -16,10 +16,10 @@ export async function GET() {
       canServe: report.canServe,
       mode: report.mode,
       offlineDataset: report.usesOfflineDataset,
+      /* Issue codes + severity only — never free-text operator hints in the HTTP body. */
       issues: report.issues.map((i) => ({
         code: i.code,
         severity: i.severity,
-        hint: i.hint,
       })),
     },
     {

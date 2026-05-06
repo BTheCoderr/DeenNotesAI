@@ -98,10 +98,9 @@ export function QuranBrowseSearchPanel({
       ) : null}
 
       <p className="text-xs text-muted leading-relaxed">
-        Full-text Qur&apos;an search needs additional production approval from Quran Foundation — per
-        their credential email. For now:{" "}
+        Full surah browsing is ready now. Full-text Qur&apos;an-wide search waits on additional Quran Foundation approvals — meanwhile you can{" "}
         <Link href="/app/quran" className="font-semibold text-accent hover:underline">
-          browse the surah index
+          browse surahs here
         </Link>
         .
       </p>

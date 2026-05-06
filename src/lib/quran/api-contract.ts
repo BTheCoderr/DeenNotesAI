@@ -62,7 +62,33 @@ export function splitQuranApiJson<T extends Record<string, unknown>>(
 
 export function offlineReflectionSubtitle(meta: QuranPublicApiMeta | null): string | null {
   if (!meta?.offlineReflectionDataset) return null;
-  return "You’re in offline reflection mode — scaffolding text only, not Qur’anic manuscript. Add Quran Foundation credentials to load live scripture.";
+  return "Practice reader — Arabic and translation lines are layout placeholders, not mushaf-ready Qur’anic text. Licensed Qur’anic wording appears once this deployment is connected to authorized content.";
+}
+
+/** Maps API errors to calm, user-safe copy (hooks / empty states). */
+export function quranFetchErrorForApp(raw: unknown): string {
+  const pe = parseQuranErrorPayload(raw);
+  switch (pe.code) {
+    case "QURAN_BLOCKED":
+      return "The Qur’an reader isn’t available in this deployment yet. You can still reflect in Notes.";
+    case "QURAN_UPSTREAM_UNAVAILABLE":
+      return "We couldn’t reach Qur’an content services. Please try again shortly.";
+    case "QURAN_INVALID_INPUT":
+      return pe.message.length < 120 ? pe.message : "That request couldn’t be completed.";
+    case "QURAN_NOT_FOUND":
+      return pe.message.length < 120 ? pe.message : "That passage wasn’t found.";
+    default: {
+      const m = pe.message;
+      if (
+        /server-side|MOCK_QURAN|GRACEFUL_MOCK|QURAN_CLIENT|Client_Secret|ClientID|Netlify|OAuth|scaffolding \(default/i.test(
+          m,
+        )
+      ) {
+        return "The reader hit a configuration limit. Try again later or continue in Notes.";
+      }
+      return m;
+    }
+  }
 }
 
 /** Normalizes Quran API error payloads (no throw). */

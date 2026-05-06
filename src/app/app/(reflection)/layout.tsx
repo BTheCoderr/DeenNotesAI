@@ -22,7 +22,7 @@ export default function ReflectionLayout({
           </div>
         </div>
       </header>
-      <div className="min-h-dvh bg-gradient-to-b from-background via-[#faf8f4] to-mint/25 pb-24">
+      <div className="min-h-dvh bg-gradient-to-b from-[#F9F6F1] via-[#fcfbf7] to-[#efede8] pb-24">
         {children}
       </div>
     </>

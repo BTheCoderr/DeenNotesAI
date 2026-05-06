@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { QuranPublicApiMeta } from "@/lib/quran/api-contract";
 import {
   parseQuranErrorPayload,
+  quranFetchErrorForApp,
   splitQuranApiJson,
 } from "@/lib/quran/api-contract";
 import type {
@@ -21,14 +22,12 @@ export function useQuranChapters() {
   const [chapters, setChapters] = useState<ChapterDto[] | null>(null);
   const [serviceMeta, setServiceMeta] = useState<QuranPublicApiMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setErrorCode(null);
     setRetryable(false);
     try {
       const res = await fetch("/api/quran/chapters", { cache: "no-store" });
@@ -44,8 +43,7 @@ export function useQuranChapters() {
 
       if (!res.ok) {
         const pe = parseQuranErrorPayload(rawUnknown);
-        setError(pe.message);
-        setErrorCode(pe.code ?? null);
+        setError(quranFetchErrorForApp(rawUnknown));
         setRetryable(Boolean(pe.retryable));
         setChapters([]);
         return;
@@ -72,7 +70,6 @@ export function useQuranChapters() {
     chapters,
     serviceMeta,
     error,
-    errorCode,
     retryable,
     loading,
     reload,
@@ -106,7 +103,7 @@ export function useQuranChapterMeta(surahNumber: number) {
 
       if (!res.ok) {
         const pe = parseQuranErrorPayload(rawUnknown);
-        setError(pe.message);
+        setError(quranFetchErrorForApp(rawUnknown));
         setRetryable(Boolean(pe.retryable));
         setChapter(null);
         return;
@@ -193,7 +190,7 @@ export function useQuranVerses(surahNumber: number, queryPart: string) {
 
       if (!res.ok) {
         const pe = parseQuranErrorPayload(rawUnknown);
-        setError(pe.message);
+        setError(quranFetchErrorForApp(rawUnknown));
         setRetryable(Boolean(pe.retryable));
         setVerses([]);
         return;

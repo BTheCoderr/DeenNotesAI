@@ -152,7 +152,7 @@ export function KhutbahRecordingPanel({ noteId, className }: Props) {
         "rounded-[1.35rem] border border-accent/18 bg-gradient-to-br from-accent-soft/35 via-surface to-mint/25 p-5 shadow-inner",
         className,
       )}
-      aria-label="Lecture recording"
+      aria-label="Khutbah or Islamic lecture recording"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">

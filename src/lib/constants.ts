@@ -10,10 +10,10 @@ export const NOTE_TYPE_LABELS: Record<
   string
 > = {
   khutbah: "Khutbah",
-  lecture: "Lecture",
-  quran_reflection: "Quran Reflection",
+  lecture: "Islamic lecture",
+  quran_reflection: "Qur’an reflection",
   halaqa: "Halaqa",
-  personal_reminder: "Personal Reminder",
+  personal_reminder: "Reminder & dua",
 };
 
 export function labelForNoteType(type: string): string {

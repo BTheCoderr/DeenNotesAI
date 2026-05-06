@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   offlineReflectionSubtitle,
   parseQuranErrorPayload,
+  quranFetchErrorForApp,
   splitQuranApiJson,
 } from "@/lib/quran/api-contract";
 import { QURAN_NOTE_REFERENCES_HINT } from "@/lib/quran/ui-copy";
@@ -50,11 +51,10 @@ export function NoteAyahEmbedCard({
 
         if (!res.ok || raw === null) {
           if (!cancel) {
+            const split = splitQuranApiJson<Record<string, unknown>>(raw ?? {});
             const pe = parseQuranErrorPayload(raw);
-            const split = splitQuranApiJson<Record<string, unknown>>(raw);
-            const m = split.meta ?? pe.meta ?? null;
-            setOfflineHelp(offlineReflectionSubtitle(m));
-            setErr(pe.message || "Unavailable.");
+            setOfflineHelp(offlineReflectionSubtitle(split.meta ?? pe.meta));
+            setErr(quranFetchErrorForApp(raw ?? {}));
           }
           return;
         }

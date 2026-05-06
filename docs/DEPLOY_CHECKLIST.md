@@ -41,9 +41,14 @@ curl -I https://deennotesai.netlify.app/app/settings
 curl -I https://deennotesai.netlify.app/app/faq
 curl -I https://deennotesai.netlify.app/app/quran
 curl -I https://deennotesai.netlify.app/app/quran/2
+
+# Quran service health — JSON has **no** secrets (issue list is code + severity only)
+curl -sS -o /dev/null -w "quran-health HTTP %{http_code}\n" https://deennotesai.netlify.app/api/quran/health
 ```
 
-After enabling the Qur’an reader, set **`QURAN_CLIENT_ID`**, **`QURAN_CLIENT_SECRET`**, optional **`QURAN_DEFAULT_TRANSLATION_IDS`**, **`QURAN_DEFAULT_TAFSIR_IDS`**, and **`QURAN_DEFAULT_RECITER_ID`** in Netlify (**server** context). Run Supabase migration **`004_deen_notes_quran_refs.sql`** so new notes can store **`quran_refs`**.
+See **`docs/QURAN_NETLIFY_ENV.md`** for exact vars: **`QURAN_CLIENT_ID`** / **`QURAN_CLIENT_SECRET`** (or **`ClientID`** / **`Client_Secret`**), **`MOCK_QURAN_API`**, **`QURAN_GRACEFUL_MOCK_FALLBACK`**, and optional defaults. Configure Netlify (**Build**, **Functions**, **Runtime**) as appropriate.
+
+After enabling the Qur’an reader, set those OAuth variables plus optional **`QURAN_DEFAULT_TRANSLATION_IDS`**, **`QURAN_DEFAULT_TAFSIR_IDS`**, **`QURAN_DEFAULT_RECITER_ID`**. Run Supabase migration **`004_deen_notes_quran_refs.sql`** so new notes can store **`quran_refs`**.
 
 ## 5. Browser smoke check
 

@@ -19,7 +19,14 @@ const fraunces = Fraunces({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#127A63",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#127A63" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F3D32" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "light",
 };
 
 export const metadata: Metadata = {
@@ -33,7 +40,10 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "DeenNotes AI",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 
@@ -44,7 +54,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
-      <body className="font-sans min-h-dvh flex flex-col">
+      <body className="font-sans min-h-dvh min-h-[100dvh] flex flex-col bg-background">
         <div className="flex-1">{children}</div>
         <SafetyNotice className="border-t border-black/5 bg-surface" />
       </body>

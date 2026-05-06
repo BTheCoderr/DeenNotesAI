@@ -10,7 +10,6 @@ type Props = {
   title?: string;
   description: string;
   serviceMeta?: QuranPublicApiMeta | null;
-  errorCode?: string | null;
   retryable?: boolean;
   onReconnect?: () => void;
   className?: string;
@@ -20,7 +19,6 @@ export function QuranServiceEmptyState({
   title = "Qur’an reader is resting",
   description,
   serviceMeta,
-  errorCode,
   retryable,
   onReconnect,
   className,
@@ -53,11 +51,6 @@ export function QuranServiceEmptyState({
           {offlineLine ? (
             <p className="text-xs text-ink/80 leading-relaxed mt-3 max-w-prose border-l-2 border-accent/35 pl-3">
               {offlineLine}
-            </p>
-          ) : null}
-          {errorCode ? (
-            <p className="text-[0.65rem] font-mono uppercase tracking-wide text-muted/90 mt-2">
-              {errorCode.replace(/_/g, " · ")}
             </p>
           ) : null}
         </div>

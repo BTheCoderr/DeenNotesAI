@@ -27,11 +27,11 @@ export function quranDisabledResponse(): NextResponse {
   return safeQuranApiFailure(
     {
       message:
-        "Quran scripture routes are paused — enable Quran Foundation credentials server-side, set MOCK_QURAN_API=true, or allow automatic graceful scaffolding (default when credentials are missing).",
+        "The Qur’an reader isn’t enabled for this site right now.",
       code: "QURAN_BLOCKED",
       retryable: false,
       hint:
-        "On Netlify: use QURAN_CLIENT_ID / QURAN_CLIENT_SECRET (or legacy ClientID / Client_Secret), or keep graceful mock on.",
+        "Operators: add QURAN_CLIENT_ID / QURAN_CLIENT_SECRET (or legacy ClientID / Client_Secret), set MOCK_QURAN_API=true, or leave QURAN_GRACEFUL_MOCK_FALLBACK unset for default graceful scaffold.",
     },
     503,
   );
@@ -74,11 +74,11 @@ export async function guardQuranOrExecute<T extends NextResponse | unknown>(
 
     return safeQuranApiFailure(
       {
-        message:
-          "Unable to reach Quran scripture services right now. Try again shortly.",
+        message: "Scripture services are unreachable right now. Please try again shortly.",
         code: "QURAN_UPSTREAM_UNAVAILABLE",
         retryable: true,
-        hint: "Inspect Netlify secrets and upstream availability if this persists.",
+        hint:
+          "Check Netlify function logs, Quran Foundation status, OAuth env scopes, and gateway overrides (QURAN_GATEWAY_URL / QURAN_OAUTH_BASE_URL).",
       },
       502,
     );

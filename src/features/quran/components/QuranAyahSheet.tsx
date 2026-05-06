@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import {
-  parseQuranErrorPayload,
+  quranFetchErrorForApp,
   splitQuranApiJson,
 } from "@/lib/quran/api-contract";
 import type { VerseDto } from "@/lib/quran/types";
@@ -58,14 +58,13 @@ export function QuranAyahSheet({
         raw = null;
       }
       if (!res.ok) {
-        const pe = parseQuranErrorPayload(raw);
-        setError(pe.message);
+        setError(quranFetchErrorForApp(raw));
         setVerse(null);
         return;
       }
       const { data } = splitQuranApiJson<{ verse?: VerseDto | null }>(raw);
       if (!data.verse) {
-        setError("This ayah could not be hydrated.");
+        setError("We couldn’t load this ayah.");
         setVerse(null);
         return;
       }
@@ -229,8 +228,7 @@ export function QuranAyahSheet({
                       </>
                     ) : (
                       <p className="mt-2 text-xs text-muted italic">
-                        No tafsir excerpt with current resources — enable ids in
-                        server env or mock data.
+                        No tafsir excerpt with the resources currently selected — try opening this ayah again after refresh.
                       </p>
                     )}
                   </section>

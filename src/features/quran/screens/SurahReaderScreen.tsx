@@ -25,6 +25,10 @@ import {
   writeOfflineReadingPrepIntent,
 } from "@/lib/browser/quranenc-preference";
 import {
+  readPreferredReciterResourceId,
+  readPreferredTafsirResourceId,
+} from "@/lib/browser/quran-content-prefs";
+import {
   appendAyahHistory,
   addOrUpdateBookmark,
   getContinueReading,
@@ -113,13 +117,22 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
   }, []);
 
   const queryPart = useMemo(() => {
+    const qs = new URLSearchParams();
     const stored = readPreferredTranslationIds();
-    if (stored) return `?translations=${encodeURIComponent(stored)}`;
-    const n = Number(selectedTranslation);
-    if (selectedTranslation !== "pref" && Number.isFinite(n)) {
-      return `?translations=${n}`;
+    if (stored) {
+      qs.set("translations", stored);
+    } else {
+      const n = Number(selectedTranslation);
+      if (selectedTranslation !== "pref" && Number.isFinite(n)) {
+        qs.set("translations", String(n));
+      }
     }
-    return "";
+    const tafsirId = readPreferredTafsirResourceId();
+    if (typeof tafsirId === "number" && Number.isFinite(tafsirId)) {
+      qs.append("tafsirIds", String(tafsirId));
+    }
+    const joined = qs.toString();
+    return joined ? `?${joined}` : "";
   }, [selectedTranslation]);
 
   const {
@@ -260,7 +273,7 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
           const url = j.audioUrl?.trim() ?? "";
           if (!j.available || !url) {
             setAudioError(
-              "Translation audio is not available here (offline mock or CDN blocked). QuranEnc terms still apply when text is shown.",
+              "Listening for this translation isn’t available yet for this excerpt.",
             );
             setAudioUrl(null);
             return;
@@ -288,8 +301,12 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
     setPlayerSourceLabel("Recitation preview · Quran Foundation");
     void (async () => {
       try {
+        const prefRec = readPreferredReciterResourceId();
+        const recQ = prefRec
+          ? `&reciter=${encodeURIComponent(prefRec)}`
+          : "";
         const res = await fetch(
-          `/api/quran/audio?surah=${audioTarget.surah}&ayah=${audioTarget.ayah}`,
+          `/api/quran/audio?surah=${audioTarget.surah}&ayah=${audioTarget.ayah}${recQ}`,
         );
         const j = (await res.json()) as { audioUrl?: string; error?: string };
         if (cancel) return;
@@ -697,6 +714,9 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
                   ? () => onListenQuranEnc(surahNumber, v.verseNumber, v)
                   : undefined
               }
+              reflectionScaffoldDataset={Boolean(
+                versesServiceMeta?.offlineReflectionDataset,
+              )}
             />
             );
           })}

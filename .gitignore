@@ -38,3 +38,8 @@ docs/reference/screenshots/**/*.png
 docs/reference/screenshots/**/*.jpg
 docs/reference/screenshots/**/*.jpeg
 docs/reference/screenshots/**/*.webp
+docs/product-reference/screenshots/**/*.PNG
+docs/product-reference/screenshots/**/*.png
+docs/product-reference/screenshots/**/*.jpg
+docs/product-reference/screenshots/**/*.jpeg
+docs/product-reference/screenshots/**/*.webp
