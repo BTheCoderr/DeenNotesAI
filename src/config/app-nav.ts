@@ -2,6 +2,8 @@
  * Primary app navigation — web PWA now; Expo bottom tabs later.
  * Order: Reflect · Today · New (FAB) · Quran · Prayer
  */
+import { PRIMARY_TAB_CONTRACT } from "@/shared/navigation";
+
 export type AppNavLinkItem = {
   kind: "link";
   href: string;
@@ -21,32 +23,32 @@ export type AppNavItem = AppNavLinkItem | AppNavFabItem;
 export const APP_PRIMARY_NAV_ITEMS: AppNavItem[] = [
   {
     kind: "link",
-    href: "/app/notes",
-    label: "Reflect",
+    href: PRIMARY_TAB_CONTRACT[0].webHref,
+    label: PRIMARY_TAB_CONTRACT[0].label,
     matches: (pathname) =>
       pathname === "/app/notes" || pathname.startsWith("/app/notes/"),
   },
   {
     kind: "link",
-    href: "/app",
-    label: "Today",
+    href: PRIMARY_TAB_CONTRACT[1].webHref,
+    label: PRIMARY_TAB_CONTRACT[1].label,
     matches: (pathname) => pathname === "/app",
   },
   {
     kind: "fab",
-    label: "New",
+    label: PRIMARY_TAB_CONTRACT[2].label,
     ariaLabel: "New reflection",
   },
   {
     kind: "link",
-    href: "/app/quran",
-    label: "Quran",
+    href: PRIMARY_TAB_CONTRACT[3].webHref,
+    label: PRIMARY_TAB_CONTRACT[3].label,
     matches: (pathname) => pathname.startsWith("/app/quran"),
   },
   {
     kind: "link",
-    href: "/app/prayer",
-    label: "Prayer",
+    href: PRIMARY_TAB_CONTRACT[4].webHref,
+    label: PRIMARY_TAB_CONTRACT[4].label,
     matches: (pathname) => pathname.startsWith("/app/prayer"),
   },
 ];

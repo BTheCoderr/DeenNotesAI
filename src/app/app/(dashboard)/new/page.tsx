@@ -32,7 +32,7 @@ const STUB_COPY: Record<
     body:
       "Uploads for khutbah or halaqa clips stay local-first once ready. Paste words you remember into Paste Notes today.",
   },
-  scan_pdf: {
+  upload_pdf: {
     title: "Scan / Upload PDF",
     body:
       "Halaqa and Ramadan prep PDFs need a respectful pipeline. Capture important lines manually with Paste Notes for now.",

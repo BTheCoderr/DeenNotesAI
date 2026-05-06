@@ -1,6 +1,9 @@
 import type { NoteTypeEnum } from "@/lib/database.types";
-
-import type { NewDeenNoteModeId } from "@/lib/new-deen-note-menu";
+import {
+  NOTE_MODE_CONTRACTS,
+  NOTE_MODE_IDS,
+  type NoteModeId,
+} from "@/shared/note-modes";
 
 const VALID_TYPES: NoteTypeEnum[] = [
   "khutbah",
@@ -24,38 +27,27 @@ export type NewNotePremiumStub =
   | "record_khutbah"
   | "youtube_lecture"
   | "upload_audio"
-  | "scan_pdf";
+  | "upload_pdf";
 
-const PREMIUM_STUBS = new Set<NewNotePremiumStub>([
-  "record_khutbah",
-  "youtube_lecture",
-  "upload_audio",
-  "scan_pdf",
-]);
+const PREMIUM_STUBS = new Set<NewNotePremiumStub>(
+  NOTE_MODE_CONTRACTS.filter((m) => m.comingSoon).map((m) => m.id as NewNotePremiumStub),
+);
 
-const MODE_TO_NOTE: Partial<Record<NewDeenNoteModeId, NoteTypeEnum>> = {
-  paste_notes: "personal_reminder",
-  personal_reminder: "personal_reminder",
-  quran_reflection: "quran_reflection",
-};
+const MODE_TO_NOTE: Partial<Record<NoteModeId, NoteTypeEnum>> = Object.fromEntries(
+  NOTE_MODE_CONTRACTS.flatMap((m) =>
+    m.noteType ? [[m.id, m.noteType as NoteTypeEnum] as const] : [],
+  ),
+) as Partial<Record<NoteModeId, NoteTypeEnum>>;
 
 export type ParsedNewNoteQuery =
   | { kind: "form"; noteType: NoteTypeEnum }
   | { kind: "premium"; stub: NewNotePremiumStub };
 
-function normalizeModeParam(raw: string | undefined): NewDeenNoteModeId | undefined {
+function normalizeModeParam(raw: string | undefined): NoteModeId | undefined {
   if (!raw) return undefined;
-  const m = raw.trim() as NewDeenNoteModeId;
-  const valid: NewDeenNoteModeId[] = [
-    "record_khutbah",
-    "paste_notes",
-    "youtube_lecture",
-    "upload_audio",
-    "quran_reflection",
-    "scan_pdf",
-    "personal_reminder",
-  ];
-  return valid.includes(m) ? m : undefined;
+  const legacyMapped = raw.trim() === "scan_pdf" ? "upload_pdf" : raw.trim();
+  const m = legacyMapped as NoteModeId;
+  return NOTE_MODE_IDS.includes(m) ? m : undefined;
 }
 
 /**

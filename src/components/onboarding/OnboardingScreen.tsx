@@ -20,18 +20,12 @@ import {
   writeOnboardingToLocal,
   type OnboardingAnswers,
 } from "@/lib/onboarding-storage";
+import { ONBOARDING_JOURNEY_GOAL_OPTIONS } from "@/shared/onboarding";
 import { createClient } from "@/lib/supabase/client";
 import { APP_DISCLAIMER } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-const JOURNEY_GOALS = [
-  "Jumu’ah khutbah notes",
-  "Quran reflection",
-  "Halaqa or class notes",
-  "Personal reminders",
-  "Family learning",
-  "Ramadan preparation",
-] as const;
+const JOURNEY_GOALS = ONBOARDING_JOURNEY_GOAL_OPTIONS.map((option) => option.label);
 
 async function persistOnboardingRemote(answers: OnboardingAnswers) {
   const supabase = createClient();

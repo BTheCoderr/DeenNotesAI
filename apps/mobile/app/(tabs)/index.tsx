@@ -1,6 +1,8 @@
 import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
+import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
+
 export default function TodayScreen() {
   return (
     <View style={styles.wrap}>
@@ -8,7 +10,7 @@ export default function TodayScreen() {
       <Text style={styles.body}>
         Emotional home placeholder — rhythm card, ayah, reflection (Phase M3).
       </Text>
-      <Link href="/settings" style={styles.link}>
+      <Link href={SETTINGS_PROFILE_ROUTE} style={styles.link}>
         Settings · profile shell
       </Link>
     </View>

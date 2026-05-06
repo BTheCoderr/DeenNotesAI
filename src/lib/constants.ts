@@ -1,5 +1,6 @@
-export const APP_DISCLAIMER =
-  "DeenNotes is for organizing Islamic learning and personal reflection. It does not provide fatwas or religious rulings. Please consult a qualified scholar or imam for religious decisions.";
+import { DEENNOTES_SAFETY_DISCLAIMER } from "@/shared/safety-copy";
+
+export const APP_DISCLAIMER = DEENNOTES_SAFETY_DISCLAIMER;
 
 export const NOTE_TYPE_LABELS: Record<
   | "khutbah"

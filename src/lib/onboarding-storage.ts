@@ -1,15 +1,9 @@
+import type { OnboardingAnswersContract } from "@/shared/onboarding";
+
 export const ONBOARDING_STORAGE_KEY = "deennotes_onboarding_v1";
 
 /** Current onboarding persistence shape */
-export type OnboardingAnswers = {
-  /** QuranEnc translator row persisted on-device when user selects one during onboarding */
-  preferredQuranEncTranslationKey?: string | null;
-  /** Reflection / UI language hint (does not replace Arabic Quranic text authority). */
-  reflectionLanguage?: string;
-  /** Reasons the traveler chose DeenNotes (multi-select). */
-  journeyGoals: string[];
-  completedAt: string;
-};
+export type OnboardingAnswers = OnboardingAnswersContract;
 
 export function readOnboardingFromLocal(): OnboardingAnswers | null {
   if (typeof window === "undefined") return null;

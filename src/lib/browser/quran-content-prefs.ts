@@ -1,20 +1,13 @@
+import {
+  REFLECTION_LANGUAGE_OPTIONS,
+  type ReflectionLanguageCode,
+} from "@/shared/quran-preferences";
+export { REFLECTION_LANGUAGE_OPTIONS };
+
 export const TAFSIR_RESOURCE_LS = "deennotes.quran.preferred.tafsir_resource_id";
 export const RECITER_RESOURCE_LS = "deennotes.quran.preferred.reciter_resource_id";
 export const REFLECTION_LOCALE_LS = "deennotes.reflection.locale";
-
-/** BCP-like simple codes for reflection UI preference */
-export const REFLECTION_LANGUAGE_OPTIONS = [
-  { code: "en", label: "English" },
-  { code: "ar", label: "Arabic (العربية)" },
-  { code: "ur", label: "Urdu (اردو)" },
-  { code: "bn", label: "Bengali (বাংলা)" },
-  { code: "id", label: "Indonesian (Bahasa)" },
-  { code: "tr", label: "Turkish (Türkçe)" },
-  { code: "fr", label: "French (Français)" },
-] as const;
-
-export type ReflectionLocale =
-  (typeof REFLECTION_LANGUAGE_OPTIONS)[number]["code"];
+export type ReflectionLocale = ReflectionLanguageCode;
 
 export function readPreferredTafsirResourceId(): number | undefined {
   if (typeof window === "undefined") return undefined;

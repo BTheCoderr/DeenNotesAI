@@ -1,6 +1,7 @@
 /**
  * Location primitives shared by web routes and future Expo adapters.
  */
+import { LOCATION_FALLBACK } from "@/shared/prayer-preferences";
 
 export type PrayerFallbackLocation = {
   city: string;
@@ -11,9 +12,9 @@ export type PrayerFallbackLocation = {
 };
 
 export const PRAYER_FALLBACK_LOCATION: PrayerFallbackLocation = {
-  city: "Providence",
-  region: "Rhode Island",
-  country: "United States",
+  city: LOCATION_FALLBACK.city,
+  region: LOCATION_FALLBACK.region,
+  country: LOCATION_FALLBACK.country,
   label: "Providence, Rhode Island, United States",
 };
 

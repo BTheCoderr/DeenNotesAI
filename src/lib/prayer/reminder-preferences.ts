@@ -5,21 +5,23 @@
 import type { PrayerName, PrayerTodayPayload } from "./types";
 
 import { prayerTimingToEpochMs } from "./timing-compute";
+import {
+  REMINDER_OFFSETS_MINUTES,
+  type ReminderOffsetMinutes,
+} from "@/shared/prayer-preferences";
 
 export const PRAYER_REMINDER_PREFS_LS_KEY = "deennotes.prayer.reminders.v1";
 
 /** Legacy draft key — used only for one-time migration into `PRAYER_REMINDER_PREFS_LS_KEY`. */
 const LEGACY_NOTIFICATION_DRAFT_KEY = "deennotes.prayer.notification_prefs.v1";
 
-export type ReminderLeadMinutes = 0 | 5 | 10 | 15 | 30;
+export type ReminderLeadMinutes = ReminderOffsetMinutes;
 
-export const REMINDER_LEAD_OPTIONS: { value: ReminderLeadMinutes; label: string }[] = [
-  { value: 0, label: "At prayer time" },
-  { value: 5, label: "5 minutes before" },
-  { value: 10, label: "10 minutes before" },
-  { value: 15, label: "15 minutes before" },
-  { value: 30, label: "30 minutes before" },
-];
+export const REMINDER_LEAD_OPTIONS: { value: ReminderLeadMinutes; label: string }[] =
+  REMINDER_OFFSETS_MINUTES.map((value) => ({
+    value,
+    label: value === 0 ? "At prayer time" : `${value} minutes before`,
+  }));
 
 export type ObligatoryPrayerReminderKey = Exclude<PrayerName, "Sunrise">;
 
@@ -85,7 +87,7 @@ function normalizePrefs(raw: unknown): PrayerReminderPreferences {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_PRAYER_REMINDER_PREFS };
   const o = raw as Record<string, unknown>;
   const lead = Number(o.leadMinutes);
-  const allowed: ReminderLeadMinutes[] = [0, 5, 10, 15, 30];
+  const allowed: ReminderLeadMinutes[] = [...REMINDER_OFFSETS_MINUTES];
   const leadMinutes = (allowed.includes(lead as ReminderLeadMinutes)
     ? lead
     : DEFAULT_PRAYER_REMINDER_PREFS.leadMinutes) as ReminderLeadMinutes;

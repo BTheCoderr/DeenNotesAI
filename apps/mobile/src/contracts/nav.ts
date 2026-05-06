@@ -1,11 +1,26 @@
-/**
- * Keep in sync with `src/config/app-nav.ts` on web (Phase M2 → packages/shared).
- */
+import {
+  PRIMARY_TAB_CONTRACT,
+  SETTINGS_PROFILE_ROUTE as SHARED_SETTINGS_PROFILE_ROUTE,
+  type PrimaryTabId,
+} from "../../../../src/shared/navigation";
 
-export const PRIMARY_TAB_ORDER = [
-  { name: "reflect", title: "Reflect", href: "/reflect" as const },
-  { name: "index", title: "Today", href: "/" as const },
-  { name: "new", title: "New", href: "/new" as const },
-  { name: "quran", title: "Quran", href: "/quran" as const },
-  { name: "prayer", title: "Prayer", href: "/prayer" as const },
-] as const;
+export type MobileTabId = PrimaryTabId;
+
+export const PRIMARY_TAB_ORDER = PRIMARY_TAB_CONTRACT.map((tab) => ({
+  id: tab.id,
+  name: tab.mobileRouteName,
+  title: tab.label,
+  href:
+    tab.id === "today"
+      ? ("/" as const)
+      : (`/${tab.mobileRouteName}` as `/${string}`),
+  a11yLabel: tab.a11yLabel,
+})) as readonly {
+  id: MobileTabId;
+  name: string;
+  title: string;
+  href: `/${string}`;
+  a11yLabel: string;
+}[];
+
+export const SETTINGS_PROFILE_ROUTE = `/${SHARED_SETTINGS_PROFILE_ROUTE.mobileRouteName}` as const;

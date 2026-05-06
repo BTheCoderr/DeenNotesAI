@@ -1,5 +1,7 @@
 import { Tabs } from "expo-router";
 
+import { PRIMARY_TAB_ORDER } from "../../src/contracts/nav";
+
 const stone = "#F6F4F0";
 const emerald = "#127A63";
 
@@ -16,11 +18,13 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen name="reflect" options={{ title: "Reflect" }} />
-      <Tabs.Screen name="index" options={{ title: "Today" }} />
-      <Tabs.Screen name="new" options={{ title: "New" }} />
-      <Tabs.Screen name="quran" options={{ title: "Quran" }} />
-      <Tabs.Screen name="prayer" options={{ title: "Prayer" }} />
+      {PRIMARY_TAB_ORDER.map((tab) => (
+        <Tabs.Screen
+          key={tab.id}
+          name={tab.name}
+          options={{ title: tab.title, tabBarAccessibilityLabel: tab.a11yLabel }}
+        />
+      ))}
     </Tabs>
   );
 }
