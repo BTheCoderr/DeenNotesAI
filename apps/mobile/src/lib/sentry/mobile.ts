@@ -84,6 +84,28 @@ export function captureAppIssue(scope: string, err: unknown, extra?: Record<stri
   });
 }
 
+/**
+ * Lightweight product funnel markers (non-PII). Breadcrumbs attach to future errors only;
+ * for aggregate funnels use Sentry Releases / Discover with message patterns or add a dashboard later.
+ */
+export function observeProductEvent(
+  event: string,
+  data?: Record<string, string | number | boolean>,
+): void {
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.info(`[deennotes:${event}]`, data ?? {});
+  }
+  const dsn = resolveDsn();
+  if (!dsn) return;
+  Sentry.addBreadcrumb({
+    category: "deennotes.product",
+    message: event.length > 80 ? `${event.slice(0, 80)}…` : event,
+    level: "info",
+    data: data ?? {},
+  });
+}
+
 export function captureAppMessage(
   scope: string,
   message: string,

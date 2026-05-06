@@ -20,6 +20,7 @@ import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import type { KhutbahRecordingMeta } from "../../src/contracts/khutbah-recording";
 import { labelForNoteType } from "../../src/contracts/note-types";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
+import { usePremium } from "../../src/hooks/usePremium";
 import { formatQuranRefs, useStringLines } from "../../src/lib/note-display";
 import { findRecordingForReflection } from "../../src/lib/khutbah-recordings-storage";
 import { readReflectionLibrary, type ReflectionLibraryItem } from "../../src/lib/reflection-library";
@@ -113,6 +114,12 @@ function NoteDetailScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const auth = useMobileSession();
+  const {
+    openPaywall,
+    isHydrated,
+    isPremium,
+    purchasesAvailable,
+  } = usePremium();
   const nid = Array.isArray(id) ? id[0] : id;
 
   const [localLib, setLocalLib] = useState<ReflectionLibraryItem[]>([]);
@@ -130,7 +137,8 @@ function NoteDetailScreen() {
   }, [nid]);
 
   const hasSignedIn = Boolean(auth.ready && supabase && auth.accessToken);
-  const noteQuery = useDeenNote(nid, hasSignedIn);
+  const cloudSyncAllowed = !purchasesAvailable || isPremium;
+  const noteQuery = useDeenNote(nid, hasSignedIn && cloudSyncAllowed);
   const localItem = nid ? localLib.find((x) => x.id === nid) : undefined;
 
   const note = noteQuery.data;
@@ -166,7 +174,34 @@ function NoteDetailScreen() {
     );
   }
 
-  if (hasSignedIn && noteQuery.isPending) {
+  if (
+    hasSignedIn &&
+    purchasesAvailable &&
+    isHydrated &&
+    !isPremium &&
+    nid &&
+    !localItem
+  ) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
+        <ScrollView contentContainerStyle={styles.pad} showsVerticalScrollIndicator={false}>
+          <Text style={styles.h1}>Reflection from your account</Text>
+          <Text style={styles.body}>
+            Full cloud library access on mobile is part of DeenNotes Plus. You can still craft new reflections on the
+            complimentary path from the New tab.
+          </Text>
+          <Pressable style={styles.primary} onPress={() => openPaywall("reflect_cloud_sync")}>
+            <Text style={styles.primaryTxt}>Learn about Plus</Text>
+          </Pressable>
+          <Pressable style={styles.ghost} onPress={() => router.push("/(tabs)/reflect")}>
+            <Text style={styles.ghostTxt}>Back to Reflect</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (hasSignedIn && cloudSyncAllowed && noteQuery.isPending) {
     return (
       <SafeAreaView style={[styles.safe, styles.center]} edges={["bottom", "left", "right"]}>
         <ActivityIndicator size="large" color={emerald} />

@@ -7,12 +7,14 @@ import { useEffect } from "react";
 import { View } from "react-native";
 
 import { OfflineRibbon } from "../src/components/OfflineRibbon";
-import { CloseModalHeaderButton } from "../src/components/stack/CloseModalHeaderButton";
+import { AppBackHeaderButton } from "../src/components/stack/AppBackHeaderButton";
 import { ComposeBackHeaderButton } from "../src/components/stack/ComposeBackHeaderButton";
 import { MobileMonitoringBootstrap } from "../src/components/MobileMonitoringBootstrap";
 import { PrayerEngineEffects } from "../src/components/PrayerEngineEffects";
+import { ProductLifecycleAnalytics } from "../src/components/ProductLifecycleAnalytics";
 import { WidgetSnapshotEffects } from "../src/components/WidgetSnapshotEffects";
 import { NetworkStatusProvider } from "../src/context/NetworkStatusContext";
+import { PremiumProvider } from "../src/context/PremiumContext";
 import { QuranPlaybackProvider } from "../src/context/QuranPlaybackContext";
 import { queryClient } from "../src/lib/queryClient";
 import { useNotificationPresentationHandler } from "../src/lib/notifications/handler";
@@ -43,7 +45,9 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NetworkStatusProvider>
+      <PremiumProvider>
+        <ProductLifecycleAnalytics />
+        <NetworkStatusProvider>
         <NotificationBootstrap />
         <MobileMonitoringBootstrap />
         <PrayerEngineEffects />
@@ -66,12 +70,10 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="new-sheet"
                   options={{
-                    presentation: "modal",
-                    headerShown: true,
-                    title: "New reflection",
-                    headerStyle: { backgroundColor: headerSurface },
-                    headerTintColor: emerald,
-                    headerLeft: () => <CloseModalHeaderButton fallback="/(tabs)" />,
+                    presentation: "transparentModal",
+                    animation: "fade",
+                    headerShown: false,
+                    contentStyle: { backgroundColor: "transparent" },
                   }}
                 />
                 <Stack.Screen
@@ -81,6 +83,7 @@ export default function RootLayout() {
                     title: "Sign in",
                     headerStyle: { backgroundColor: headerSurface },
                     headerTintColor: emerald,
+                    headerLeft: () => <AppBackHeaderButton fallback="/(tabs)" />,
                   }}
                 />
                 <Stack.Screen
@@ -100,6 +103,9 @@ export default function RootLayout() {
                     title: "Khutbah",
                     headerStyle: { backgroundColor: headerSurface },
                     headerTintColor: emerald,
+                    headerLeft: () => (
+                      <AppBackHeaderButton fallback="/new-sheet" accessibilityLabel="Leave recording" />
+                    ),
                   }}
                 />
                 <Stack.Screen
@@ -109,6 +115,7 @@ export default function RootLayout() {
                     title: "Recordings",
                     headerStyle: { backgroundColor: headerSurface },
                     headerTintColor: emerald,
+                    headerLeft: () => <AppBackHeaderButton fallback="/(tabs)/reflect" />,
                   }}
                 />
                 <Stack.Screen
@@ -118,6 +125,7 @@ export default function RootLayout() {
                     title: "Recording",
                     headerStyle: { backgroundColor: headerSurface },
                     headerTintColor: emerald,
+                    headerLeft: () => <AppBackHeaderButton fallback="/recordings" />,
                   }}
                 />
                 <Stack.Screen
@@ -127,6 +135,7 @@ export default function RootLayout() {
                     title: "Reflection",
                     headerStyle: { backgroundColor: headerSurface },
                     headerTintColor: emerald,
+                    headerLeft: () => <AppBackHeaderButton fallback="/(tabs)/reflect" />,
                   }}
                 />
                 <Stack.Screen name="quran" options={{ headerShown: false }} />
@@ -135,6 +144,7 @@ export default function RootLayout() {
           </View>
         </View>
       </NetworkStatusProvider>
+      </PremiumProvider>
     </QueryClientProvider>
   );
 }

@@ -38,9 +38,9 @@ import {
   stone,
 } from "../src/theme";
 
-import {
-  writeMobileQuranPrefs,
-} from "../src/lib/mobile-quran-prefs";
+import { writeMobileQuranPrefs } from "../src/lib/mobile-quran-prefs";
+import { logProductEvent } from "../src/lib/analytics/mobile-product-events";
+import { setPaywallTriggerAfterOnboarding } from "../src/lib/purchases/premium-storage";
 const DONE_KEY = "deennotes.mobile.onboarding.v1";
 const ANSWERS_KEY = "deennotes.mobile.onboarding.answers.v1";
 
@@ -80,11 +80,13 @@ export default function OnboardingScreen() {
       completedAt: new Date().toISOString(),
     };
     await AsyncStorage.setItem(DONE_KEY, "1");
+    await setPaywallTriggerAfterOnboarding();
     await AsyncStorage.setItem(ANSWERS_KEY, JSON.stringify(answers));
     await writeMobileQuranPrefs({
       language: reflectionLang,
       translationKey: quranLang,
     });
+    logProductEvent("onboarding_completed", { steps: ONBOARDING_STEPS.length });
     router.replace("/(tabs)");
   }
 

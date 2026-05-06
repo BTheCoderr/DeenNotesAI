@@ -8,7 +8,7 @@ const INVITE_URL = "https://deennotesai.netlify.app/app";
 export default function SettingsInviteScreen() {
   async function invite() {
     await Share.share({
-      message: `Try DeenNotes — calm Qur'an reading and private reflections.\n${INVITE_URL}`,
+      message: `DeenNotes — Qur’an reading, prayer rhythm, and private reflections in one gentle app.\n${INVITE_URL}`,
       url: INVITE_URL,
     });
   }
@@ -16,11 +16,16 @@ export default function SettingsInviteScreen() {
   return (
     <SettingsDocScreen title="Invite a friend">
       <P>
-        Share the same gentle pace you enjoy: Today for prayer context, Qur&apos;an for slow reading, Reflect for your
-        heart-notes — none of it broadcasts unless someone chooses it.
+        Share DeenNotes with someone who wants a calmer Qur&apos;an, prayer, and reflection habit — nothing flashy, just
+        space to return to what matters.
       </P>
-      <Pressable style={styles.btn} onPress={() => void invite()}>
-        <Text style={styles.btnTxt}>Share invite link</Text>
+      <Pressable
+        style={styles.btn}
+        onPress={() => void invite()}
+        accessibilityRole="button"
+        accessibilityLabel="Share invite"
+      >
+        <Text style={styles.btnTxt}>Share invite</Text>
       </Pressable>
     </SettingsDocScreen>
   );

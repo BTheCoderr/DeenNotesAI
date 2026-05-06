@@ -51,6 +51,9 @@ type Props = {
   hadCachedVersesFile: boolean;
   initialResumeAyah: number | null;
   showOfflineRibbon: boolean;
+  /** Surah prefetch + explicit save bundles (RevenueCat). */
+  offlineAudioUnlocked: boolean;
+  onRequestOfflineAudioPremium: () => void;
 };
 
 /** Scroll + verse UI for one surah. Immersion, prefetch, playback controls. Auto-scroll anchor prep: refs on ScrollView — parent passes initialResumeAyah. */
@@ -63,6 +66,8 @@ export function QuranSurahReader({
   hadCachedVersesFile,
   initialResumeAyah,
   showOfflineRibbon,
+  offlineAudioUnlocked,
+  onRequestOfflineAudioPremium,
 }: Props) {
   const router = useRouter();
   const navigation = useNavigation();
@@ -128,7 +133,7 @@ export function QuranSurahReader({
   );
 
   useEffect(() => {
-    if (!chapterId || !effectivePayload?.verses?.length || !prefs) return;
+    if (!offlineAudioUnlocked || !chapterId || !effectivePayload?.verses?.length || !prefs) return;
     const pivot = resumeAyah ?? 1;
     const list: number[] = [];
     for (let d = -2; d <= 2; d++) {
@@ -139,9 +144,21 @@ export function QuranSurahReader({
       audioWifiOnly: prefs.audioWifiOnly ?? false,
       maxCacheMb: prefs.audioMaxCacheMb ?? 200,
     });
-  }, [chapterId, effectivePayload?.verses?.length, prefs, reciter, resumeAyah, verseCount]);
+  }, [
+    offlineAudioUnlocked,
+    chapterId,
+    effectivePayload?.verses?.length,
+    prefs,
+    reciter,
+    resumeAyah,
+    verseCount,
+  ]);
 
   async function onDownloadSurahAudio() {
+    if (!offlineAudioUnlocked) {
+      onRequestOfflineAudioPremium();
+      return;
+    }
     if (!effectivePayload?.verses?.length || !prefs || downloadBusy) return;
     setDownloadBusy(true);
     try {
@@ -292,10 +309,18 @@ export function QuranSurahReader({
             onPress={() => void onDownloadSurahAudio()}
             disabled={downloadBusy}
           >
-            <Text style={styles.toolBtnTxt}>{downloadBusy ? "Preparing audio…" : "Save surah audio"}</Text>
+            <Text style={styles.toolBtnTxt}>
+              {offlineAudioUnlocked
+                ? downloadBusy
+                  ? "Preparing audio…"
+                  : "Save surah audio"
+                : "Save surah audio (Plus)"}
+            </Text>
           </Pressable>
           <Text style={styles.toolRowHelper}>
-            Keeps listening ready on this phone when data is steadier — nothing leaves the device unless you share it later.
+            {offlineAudioUnlocked
+              ? "Keeps listening ready on this phone when data is steadier — nothing leaves the device unless you share it later."
+              : "Offline verse bundles unlock with DeenNotes Plus — listening while online stays open."}
           </Text>
           {wifiOnly ? <Text style={styles.wifiNote}>Wi‑Fi only downloads are on in settings.</Text> : null}
         </View>

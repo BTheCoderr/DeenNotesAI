@@ -21,7 +21,7 @@ export default function PrayerSettingsHubScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
       <View style={styles.pad}>
-        <Text style={styles.h1}>Prayer & reminders</Text>
+        <Text style={styles.h1}>Prayer Preferences</Text>
         <Text style={styles.lead}>
           Quiet times, calculation method, location, and humble nudges before each ṣalāh stay on the Prayer tab —
           tuned for clarity, not alarms.
@@ -29,7 +29,7 @@ export default function PrayerSettingsHubScreen() {
         <Pressable style={styles.primary} onPress={() => router.push("/(tabs)/prayer")}>
           <Text style={styles.primaryTxt}>Open Prayer</Text>
         </Pressable>
-        <Text style={styles.hint}>Tip: Switch to Settings inside Prayer for methods, reminders, and location.</Text>
+        <Text style={styles.hint}>Tip: Open the Prayer tab, then choose Preferences for methods, reminders, and location.</Text>
 
         <View style={styles.card}>
           <Text style={styles.k}>While you&apos;re here</Text>

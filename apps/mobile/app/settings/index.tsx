@@ -4,10 +4,20 @@ import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import type { Href } from "expo-router";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useMobileSession } from "../../src/hooks/useMobileSession";
+import { usePremium } from "../../src/hooks/usePremium";
+import { logoutRevenueCatIfConfigured } from "../../src/lib/purchases/revenuecat-bootstrap";
 import { supabase } from "../../src/lib/supabase";
 import {
   border,
@@ -74,7 +84,15 @@ function ChevRow({
 export default function SettingsIndexScreen() {
   const router = useRouter();
   const auth = useMobileSession();
+  const {
+    openPaywall,
+    isPremium,
+    purchasesAvailable,
+    restorePurchases,
+    refreshEntitlements,
+  } = usePremium();
   const [busy, setBusy] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   async function replayOnboarding() {
     await AsyncStorage.removeItem(ONBOARDING_KEY);
@@ -85,10 +103,52 @@ export default function SettingsIndexScreen() {
     if (!supabase) return;
     setBusy(true);
     try {
+      await logoutRevenueCatIfConfigured();
       await supabase.auth.signOut();
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onRestorePurchases() {
+    if (!purchasesAvailable) {
+      Alert.alert(
+        "Restore unavailable",
+        "Restoring purchases requires the iOS app with RevenueCat configured.",
+      );
+      return;
+    }
+    setRestoring(true);
+    try {
+      await restorePurchases();
+      await refreshEntitlements();
+      Alert.alert("Purchases refreshed", "We checked App Store receipts for DeenNotes Plus.");
+    } catch (e) {
+      Alert.alert(
+        "Couldn’t restore",
+        e instanceof Error ? e.message : "Try again once you’re online.",
+      );
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  function onSubscriptionPress() {
+    if (!purchasesAvailable) {
+      Alert.alert(
+        "Subscriptions",
+        "Subscription management appears on builds with RevenueCat keys.",
+      );
+      return;
+    }
+    if (isPremium) {
+      Alert.alert(
+        "DeenNotes Plus",
+        "Thank you — your privileges are active. Manage or cancel anytime in Settings → Apple ID → Subscriptions.",
+      );
+      return;
+    }
+    openPaywall("general");
   }
 
   const email = auth.ready ? auth.session?.user?.email : null;
@@ -103,40 +163,90 @@ export default function SettingsIndexScreen() {
       >
         <Text style={styles.screenTitle}>Settings</Text>
 
-        <View style={styles.plusCard} accessibilityRole="text">
-          <View style={styles.badge}>
-            <Text style={styles.badgeTxt}>Beta</Text>
-          </View>
-          <Text style={styles.plusTitle}>DeenNotes Plus</Text>
-          <Text style={styles.plusSub}>
-            Unlock deeper reflection, Qur&apos;an tools, and offline listening — calm memberships, never noisy streaks.
-          </Text>
-          <Text style={styles.plusHint}>Coming soon</Text>
-        </View>
+        <Section title="Premium">
+          <Pressable
+            style={styles.plusCard}
+            accessibilityRole="button"
+            accessibilityLabel="DeenNotes Plus privileges"
+            onPress={() => {
+              if (!purchasesAvailable) return;
+              if (isPremium) {
+                Alert.alert(
+                  "DeenNotes Plus",
+                  "Your privileges are active. Thank you for supporting calmer reflection.",
+                );
+                return;
+              }
+              openPaywall("general");
+            }}
+            disabled={!purchasesAvailable}
+          >
+            <View style={styles.badge}>
+              <Ionicons name="sparkles" size={16} color={emerald} style={{ marginRight: 6 }} />
+              <Text style={styles.badgeTxt}>{isPremium ? "Plus · active" : "DeenNotes Plus"}</Text>
+            </View>
+            <Text style={styles.plusTitle}>My privileges</Text>
+            <Text style={styles.plusSub}>
+              {isPremium
+                ? "Deeper reflective space and listening — paced for your journey. Thank you for supporting DeenNotes."
+                : "Unhurried listening, richer reflection flow, and gentle rhythm across prayer and Quran."}
+            </Text>
+            {purchasesAvailable && !isPremium ? (
+              <Text style={styles.plusHint}>Tap to explore Plus calmly</Text>
+            ) : !purchasesAvailable ? (
+              <Text style={styles.plusHint}>Plus unlocks on iOS with RevenueCat keys</Text>
+            ) : (
+              <Text style={styles.plusHint}>Blessed support — privileges are active</Text>
+            )}
+          </Pressable>
+        </Section>
 
         <Section title="Account">
           {signedIn ? (
-            <View style={[styles.accountBlock, styles.rowLast]}>
+            <View style={styles.accountBlock}>
               <View style={styles.rowIconWrap}>
                 <Ionicons name="person-outline" size={22} color={emerald} />
               </View>
               <View style={styles.rowTxt}>
                 <Text style={styles.rowTitle}>{email}</Text>
-                <Text style={styles.rowSub}>Reflections sync with the web app on this device.</Text>
+                <Text style={styles.rowSub}>Reflections sync with DeenNotes on this device.</Text>
               </View>
             </View>
           ) : (
             <ChevRow
               icon="person-outline"
-              title="Sign in"
-              subtitle="Sync reflections with your DeenNotes account."
+              title="Account"
+              subtitle="Sign in to sync reflections across devices."
               href="/login"
-              last
             />
           )}
-          <ChevRow icon="shield-outline" title="Privacy" href="/settings/privacy" />
-          <ChevRow icon="document-text-outline" title="Terms" href="/settings/terms" />
-          <ChevRow icon="heart-outline" title="About DeenNotes" href="/settings/about" last />
+          <ChevRow
+            icon="card-outline"
+            title="Subscription"
+            subtitle={isPremium ? "DeenNotes Plus active" : "Review or upgrade calmly"}
+            onPress={onSubscriptionPress}
+          />
+          <Pressable
+            style={[styles.row, styles.rowLast]}
+            onPress={() => void onRestorePurchases()}
+            disabled={restoring}
+            accessibilityRole="button"
+            accessibilityLabel="Restore purchases"
+          >
+            <View style={styles.rowIconWrap}>
+              <Ionicons name="refresh-outline" size={22} color={emerald} />
+            </View>
+            <View style={styles.rowTxt}>
+              <Text style={styles.rowTitle}>Restore purchases</Text>
+              <Text style={styles.rowSub}>Reconnect App Store receipts to this device.</Text>
+            </View>
+            {restoring ? (
+              <ActivityIndicator color={emerald} />
+            ) : (
+              <Ionicons name="chevron-forward" size={22} color={muted} />
+            )}
+          </Pressable>
+
           {signedIn ? (
             <Pressable
               style={[styles.signOut, busy && styles.signOutDisabled]}
@@ -149,33 +259,25 @@ export default function SettingsIndexScreen() {
         </Section>
 
         <Section title="Worship">
-          <ChevRow icon="time-outline" title="Prayer preferences" subtitle="Methods, times, manual city" href="/settings/prayer" />
-          <ChevRow
-            icon="notifications-outline"
-            title="Prayer reminders"
-            subtitle="Quiet prompts before each ṣalāh"
-            href="/settings/prayer"
-          />
-          <ChevRow icon="location-outline" title="Location" subtitle="City-level placement for times" href="/settings/location" />
+          <ChevRow icon="time-outline" title="Prayer Preferences" href="/settings/prayer" />
+          <ChevRow icon="location-outline" title="Location" subtitle="City-level salah placement" href="/settings/location" />
+          <ChevRow icon="calendar-outline" title="Hijri calendar" subtitle="Islamic calendar overlays" href="/settings/hijri" />
           <ChevRow
             icon="moon-outline"
-            title="Hijri calendar & Ramadan"
-            subtitle="Month-aware overlays"
+            title="Ramadan settings"
+            subtitle="Tarawīh rhythm & fasting context"
             href="/settings/hijri"
             last
           />
         </Section>
 
         <Section title="Quran">
-          <ChevRow icon="settings-outline" title="Quran preferences" subtitle="Reading, audio & cache hub" href="/settings/quran" />
-          <ChevRow icon="book-outline" title="Translation language" subtitle="Defaults beside Arabic" href="/quran/settings" />
-          <ChevRow icon="library-outline" title="Tafsir" subtitle="Scholarly notes when wired" href="/quran/settings" />
-          <ChevRow icon="mic-outline" title="Reciter" subtitle="Narration & quality" href="/quran/settings" />
-          <ChevRow icon="archive-outline" title="Offline Quran" subtitle="Cached surahs on-device" href="/settings/offline" />
+          <ChevRow icon="book-outline" title="Quran preferences" subtitle="Reading, translation & defaults" href="/settings/quran" />
+          <ChevRow icon="archive-outline" title="Offline reading" subtitle="Cached surahs on-device" href="/settings/offline" />
           <ChevRow
-            icon="download-outline"
-            title="Audio downloads"
-            subtitle="Wi‑Fi guardrails & queueing"
+            icon="mic-outline"
+            title="Reciter & audio"
+            subtitle="Playback & narration"
             href="/quran/settings"
             last
           />
@@ -183,32 +285,38 @@ export default function SettingsIndexScreen() {
 
         <Section title="Reflection">
           <ChevRow
-            icon="sparkles-outline"
-            title="Reflection preferences"
-            subtitle="Continuity & Today alignment"
-            href="/settings/continuity-preferences"
+            icon="chatbubble-ellipses-outline"
+            title="Chat history"
+            subtitle="AI threads beside your reflections"
+            href="/(tabs)/reflect"
           />
-          <ChevRow icon="mic-outline" title="Khutbah recordings" subtitle="On-device audio & craft flow" href="/settings/recordings" />
-          <ChevRow icon="reader-outline" title="Saved reflections" subtitle="Open Reflect tab" href="/(tabs)/reflect" />
-          <ChevRow icon="folder-outline" title="Folders" subtitle="Library organisation (planned)" href="/settings/folders" last />
+          <ChevRow
+            icon="reader-outline"
+            title="Reflection history"
+            subtitle="Saved reflections from Reflect"
+            href="/(tabs)/reflect"
+          />
+          <ChevRow icon="folder-outline" title="Folders" subtitle="Organise your library" href="/settings/folders" />
+          <ChevRow icon="mic-outline" title="Recordings" subtitle="Khutbah & on-device audio" href="/settings/recordings" last />
         </Section>
 
         <Section title="Support">
-          <ChevRow icon="help-circle-outline" title="FAQ" href="/settings/faq" />
-          <ChevRow icon="chatbubble-ellipses-outline" title="Feedback" href="/settings/feedback" />
+          <ChevRow icon="information-circle-outline" title="About" href="/settings/about" />
+          <ChevRow icon="mail-outline" title="Feedback" href="/settings/feedback" />
           <ChevRow icon="paper-plane-outline" title="Invite a friend" href="/settings/invite" />
-          <ChevRow
-            icon="phone-portrait-outline"
-            title="Home screen widgets"
-            subtitle="iOS previews & payloads"
-            href="/settings/widget-preferences"
-            last
-          />
+          <ChevRow icon="help-circle-outline" title="FAQ" href="/settings/faq" />
+          <ChevRow icon="shield-outline" title="Privacy" href="/settings/privacy" />
+          <ChevRow icon="document-text-outline" title="Terms" href="/settings/terms" last />
         </Section>
 
         <Pressable style={styles.footerLink} onPress={() => void replayOnboarding()}>
           <Text style={styles.footerLinkTxt}>Replay onboarding</Text>
         </Pressable>
+        {__DEV__ ? (
+          <Pressable style={styles.footerLink} onPress={() => router.push("/internal/navigation-audit")}>
+            <Text style={[styles.footerLinkTxt, { opacity: 0.8 }]}>Internal navigation audit</Text>
+          </Pressable>
+        ) : null}
         {__DEV__ ? (
           <Pressable style={styles.footerLink} onPress={() => router.push("/internal/qa")}>
             <Text style={[styles.footerLinkTxt, { opacity: 0.8 }]}>Internal QA checklist</Text>
@@ -232,7 +340,8 @@ const styles = StyleSheet.create({
   },
 
   plusCard: {
-    borderRadius: radii.lg,
+    margin: spacing.sm,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: "rgba(184,134,11,0.35)",
     backgroundColor: "rgba(184,134,11,0.06)",
@@ -240,6 +349,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   badge: {
+    flexDirection: "row",
+    alignItems: "center",
     alignSelf: "flex-start",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,

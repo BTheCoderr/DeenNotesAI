@@ -1,6 +1,16 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { border, cardBg, fontSerifHeading, fontSizes, ink, muted, radii, spacing } from "../../theme";
+import {
+  border,
+  bronze,
+  cardBg,
+  fontSerifHeading,
+  fontSizes,
+  ink,
+  muted,
+  radii,
+  spacing,
+} from "../../theme";
 
 type Props = {
   promptLine: string;
@@ -9,6 +19,7 @@ type Props = {
 export function QuietReflectionSection({ promptLine }: Props) {
   return (
     <View style={styles.card}>
+      <Text style={styles.kicker}>Note-inspired pause</Text>
       <Text style={styles.h2}>How is your heart today?</Text>
       <Text style={styles.body}>
         Take one slow breath. You don't need to fix anything yet — only notice, gently.
@@ -31,6 +42,13 @@ const styles = StyleSheet.create({
     borderColor: border,
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  kicker: {
+    fontSize: fontSizes.xs,
+    fontWeight: "800",
+    color: bronze,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   h2: {
     fontFamily: fontSerifHeading,

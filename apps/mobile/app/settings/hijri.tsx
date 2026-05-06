@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { usePremium } from "../../src/hooks/usePremium";
 import {
   cardBg,
   emerald,
@@ -16,6 +17,27 @@ import {
 
 export default function HijriRamadanSettingsScreen() {
   const router = useRouter();
+  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
+  const unlocked = !purchasesAvailable || isPremium;
+
+  if (!unlocked) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
+        <View style={styles.pad}>
+          <Text style={styles.h1}>Hijri & Ramadan</Text>
+          <Text style={styles.lead}>
+            Seasonal guidance and overlays on mobile stay curated for DeenNotes Plus subscribers so we can steward month-aware copy without rush.
+          </Text>
+          <Pressable style={styles.primary} onPress={() => openPaywall("ramadan_planning")}>
+            <Text style={styles.primaryTxt}>Explore Plus calmly</Text>
+          </Pressable>
+          <Pressable style={styles.secondary} onPress={() => router.push("/(tabs)/prayer")}>
+            <Text style={styles.secondaryTxt}>Prayer basics stay open →</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
@@ -62,4 +84,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryTxt: { color: "#fff", fontWeight: "800", fontSize: fontSizes.md },
+  secondary: {
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.12)",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: stone,
+  },
+  secondaryTxt: { color: emerald, fontWeight: "800", fontSize: fontSizes.md },
 });

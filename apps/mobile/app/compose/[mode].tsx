@@ -23,7 +23,9 @@ import type { KhutbahRecordingMeta } from "../../src/contracts/khutbah-recording
 import { NOTE_MODE_CONTRACTS } from "../../src/contracts/note-modes";
 import type { NoteModeId } from "../../src/contracts/note-modes";
 import { DEENNOTES_SAFETY_DISCLAIMER } from "../../src/contracts/safety-copy";
+import { logFirstReflectionSavedOnce } from "../../src/lib/analytics/first-reflection-once";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
+import { usePremium } from "../../src/hooks/usePremium";
 import { composeKhutbahReflectionRawInput } from "../../src/lib/khutbah-compose";
 import {
   getKhutbahRecording,
@@ -54,6 +56,7 @@ function ComposeModeScreen() {
   const navigation = useNavigation();
   const qc = useQueryClient();
   const session = useMobileSession();
+  const { assertAiGenerationAllowed, recordSuccessfulAiGeneration } = usePremium();
 
   const rawMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
   const recordingParamRaw = Array.isArray(params.recordingId)
@@ -131,6 +134,8 @@ function ComposeModeScreen() {
       setErr("Sign in on this device so your reflection saves to your account.");
       return;
     }
+    const allowed = await assertAiGenerationAllowed();
+    if (!allowed) return;
     setSubmitting(true);
     try {
       const { noteId } = await postGenerateNote(token, body);
@@ -142,6 +147,8 @@ function ComposeModeScreen() {
         }
       }
       await qc.invalidateQueries({ queryKey: deenNotesListQueryKey });
+      await recordSuccessfulAiGeneration(id);
+      void logFirstReflectionSavedOnce();
       router.replace(`/notes/${noteId}`);
     } catch (e) {
       captureAppIssue(

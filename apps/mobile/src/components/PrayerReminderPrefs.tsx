@@ -35,7 +35,15 @@ function labelSpecial(k: string): string {
   return k;
 }
 
-export function PrayerReminderPrefs({ onAfterChange }: { onAfterChange?: () => void }) {
+export function PrayerReminderPrefs({
+  onAfterChange,
+  advancedUnlocked,
+  onRequestAdvanced,
+}: {
+  onAfterChange?: () => void;
+  advancedUnlocked: boolean;
+  onRequestAdvanced: () => void;
+}) {
   const [prefs, setPrefs] = useState<MobileReminderPrefsState | null>(null);
 
   useEffect(() => {
@@ -68,12 +76,25 @@ export function PrayerReminderPrefs({ onAfterChange }: { onAfterChange?: () => v
         Calm local reminders only — synced with salah times from AlAdhan for this locality.
       </Text>
 
+      {!advancedUnlocked ? (
+        <Text style={[styles.caption, { marginTop: spacing.sm }]}>
+          Lead-times ahead of adhān and speciality reminders stay with DeenNotes Plus — the five daily salah toggles
+          below stay open on the complimentary path.
+        </Text>
+      ) : null}
+
       <Text style={styles.sub}>Lead time</Text>
       <View style={styles.chips}>
         {([...REMINDER_OFFSETS_MINUTES] as const).map((m) => (
           <Pressable
             key={m}
-            onPress={() => persist({ ...prefs, leadMinutes: m })}
+            onPress={() => {
+              if (!advancedUnlocked) {
+                onRequestAdvanced();
+                return;
+              }
+              persist({ ...prefs, leadMinutes: m });
+            }}
             style={[styles.chip, prefs.leadMinutes === m && styles.chipActive]}
           >
             <Text style={[styles.chipTxt, prefs.leadMinutes === m && styles.chipTxtActive]}>
@@ -109,14 +130,18 @@ export function PrayerReminderPrefs({ onAfterChange }: { onAfterChange?: () => v
             <Text style={styles.rowLabel}>{labelSpecial(k)}</Text>
             <Switch
               value={val}
-              onValueChange={(v) =>
+              onValueChange={(v) => {
+                if (!advancedUnlocked) {
+                  onRequestAdvanced();
+                  return;
+                }
                 persist({
                   ...prefs,
                   ...(k === "jumuah" ? { jumuah: v } : {}),
                   ...(k === "suhoor" ? { suhoor: v } : {}),
                   ...(k === "iftar" ? { iftar: v } : {}),
-                })
-              }
+                });
+              }}
               trackColor={{ true: emerald, false: border }}
             />
           </View>

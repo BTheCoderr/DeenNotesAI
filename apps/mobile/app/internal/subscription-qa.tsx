@@ -28,84 +28,57 @@ export type QaStepPersist = {
 
 export type QaStoreV1 = { v: 1; rows: Record<string, QaStepPersist> };
 
-const STORAGE_KEY = "deennotes.internal.m7.qa.v1";
+const STORAGE_KEY = "deennotes.internal.m9.subscription.qa.v1";
 
-export const QA_SECTIONS: { id: string; title: string; steps: readonly string[] }[] = [
+export const SUBSCRIPTION_QA_SECTIONS: { id: string; title: string; steps: readonly string[] }[] = [
   {
-    id: "navigation",
-    title: "Navigation",
+    id: "purchase",
+    title: "Purchases",
     steps: [
-      'Sign-in “Not now” returns to tabs without GO_BACK spam.',
-      "New reflection modal closes safely; compose back falls back politely.",
-      "Quran reader back returns to tab list when stack is empty.",
-      "Recording idle close never leaves orphaned GO_BACK warnings.",
-      "Deleting khutbah returns to recordings gracefully.",
-      "Cold launch lands Today without phantom back presses.",
+      "Sandbox purchase on annual card completes; UI returns to app with Plus active.",
+      "Declined payment surfaces calm error string (not a dead end).",
+      "User-cancelled purchase does not nag after closing sheet.",
     ],
   },
   {
-    id: "prayer",
-    title: "Prayer",
+    id: "restore",
+    title: "Restore",
     steps: [
-      "Prayer snapshot degrades calmly offline when previously cached.",
-      "Prayer preferences persist calculation + madhab after relaunch.",
-      "Reminder rows never flash harsh loading strings.",
+      "Restore with prior subscription re-entitles without requiring re-purchase.",
+      "Restore with no receipt shows honest copy; app remains usable complimentary.",
     ],
   },
   {
-    id: "quran",
-    title: "Quran",
+    id: "trial",
+    title: "Trial & expiry",
     steps: [
-      "Previously fetched surahs open offline in airplane mode.",
-      "Immersive mode toggles translations without trapping navigation.",
-      "Audio exits cleanly after backgrounding briefly.",
+      "Starting a trial emits expected RevenueCat entitlement (periodType TRIAL/INTRO in dashboard).",
+      "After expiry, premium gates behave without flashes of unlocked UI on cold launch.",
+      "Paywall reopen after expiry feels emotionally aligned — not punitive.",
     ],
   },
   {
-    id: "reflect",
-    title: "Reflect",
+    id: "cache",
+    title: "Cache & persistence",
     steps: [
-      "Signed-out list shows local stubs; signed-in merges cloud rows.",
-      "Pull-to-refresh stays soft with placeholders.",
-      "Note detail survives long scroll.",
+      "Airplane mode + relaunch honours last known entitlement briefly (offline cache).",
+      "Forground refresh restores true state when radios return.",
+      "Logout clears premium UI for signed-in testers; unrelated anon cache preserved.",
     ],
   },
   {
-    id: "recording",
-    title: "Recording",
+    id: "paywall_timing",
+    title: "Paywall timing",
     steps: [
-      "Mic denial keeps copy compassionate.",
-      "Stop & save links recording into compose.",
-      "Leaving active capture prompts discard respectfully.",
+      "After onboarding deferral (~2–3s): paywall arrives without blocking first Today paint.",
+      "After first reflective generation: softer prompt waits ~2s after success.",
+      "Gate taps explain themselves; yearly card stays visually strongest.",
     ],
   },
   {
-    id: "offline",
-    title: "Offline",
-    steps: [
-      "Ribbon shows offline; Retry re-checks reachability.",
-      "Today holds prior prayer card when radios drop.",
-      "Chapters honour offline bundles when flagged.",
-    ],
-  },
-  {
-    id: "notifications",
-    title: "Notifications",
-    steps: ["Reminder scheduling survives denial softly.", "Expo Go warns without crashing queues."],
-  },
-  {
-    id: "auth",
-    title: "Auth",
-    steps: ["Missing env spells configuration kindly.", "Sign-out clears session UI predictably."],
-  },
-  {
-    id: "settings",
-    title: "Settings",
-    steps: [
-      "DeenNotes settings scroll fluidly.",
-      "Quran hub shortcuts land in full Quran prefs.",
-      "QA redirects away when production (__DEV__ false).",
-    ],
+    id: "compliance",
+    title: "App Store cues",
+    steps: ["Restore purchases button visible.", "Terms + Privacy links reachable from modal footer."],
   },
 ];
 
@@ -192,17 +165,18 @@ export default function InternalQaScreen() {
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.h1} accessibilityRole="header">
-          M7 QA checklist
+          M9 Subscription QA checklist
         </Text>
         <Text style={styles.lead}>
-          Developer-only checkpoints. Pass/fail toggles persist on-device — timestamps quietly record each tweak.
+          RevenueCat subscriptions, restores, caches, paywall softness — checkpoints stay on-device in __DEV__
+          builds only.
         </Text>
 
         <Pressable style={styles.clearBtn} onPress={() => void clearAll()} accessibilityLabel="Clear all QA checkpoints">
           <Text style={styles.clearBtnTxt}>Clear all checkpoints</Text>
         </Pressable>
 
-        {QA_SECTIONS.map((sec) => (
+        {SUBSCRIPTION_QA_SECTIONS.map((sec) => (
           <View key={sec.id} style={styles.card}>
             <Text style={styles.secTitle}>{sec.title}</Text>
             {sec.steps.map((txt, idx) => {

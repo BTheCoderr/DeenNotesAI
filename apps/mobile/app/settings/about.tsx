@@ -6,14 +6,15 @@ export default function SettingsAboutScreen() {
   const v = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
-    <SettingsDocScreen title="About DeenNotes">
+    <SettingsDocScreen title="About">
       <P>
-        Version {v}. DeenNotes pairs calm Qur&apos;an reading with private reflections — web and mobile honour the same gentle
-        contracts so your notebook never feels fractured.
+        Version {v}. DeenNotes helps Muslims capture khutbahs, reflections, Qur&apos;an notes, prayer routines, and
+        reminders in one calm place — for reflection, organization, and learning support alongside your worship.
       </P>
       <P>
-        Built slowly: prayer-aware surfaces, Reverent Offline copies of what you revisit, khutbah capture that never
-        rushes uploads, and heart-led prompts that defer to scholars for fiqh edge cases.
+        DeenNotes does not replace qualified scholars, imām-s, or local masjid leadership. Use it to organise what you
+        heard, what you read, and what you intend to act on — then turn to trustworthy people for rulings, counselling,
+        or community decisions.
       </P>
     </SettingsDocScreen>
   );

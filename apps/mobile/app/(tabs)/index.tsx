@@ -14,16 +14,16 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { usePrayerToday } from "../../src/api/hooks/usePrayerToday";
-import { MobileWordmark } from "../../src/components/brand/MobileWordmark";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { SkeletonHeroCard } from "../../src/components/skeleton/CalmSkeleton";
 import { ContinueReadingCard } from "../../src/components/today/ContinueReadingCard";
 import { DailyAyahCard } from "../../src/components/today/DailyAyahCard";
-import { DayContextCards } from "../../src/components/today/DayContextCards";
+import { JourneyWeekStrip } from "../../src/components/today/JourneyWeekStrip";
 import { QuietReflectionSection } from "../../src/components/today/QuietReflectionSection";
 import { TodayPrayerHero } from "../../src/components/today/TodayPrayerHero";
 import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
 import { DEENNOTES_SAFETY_DISCLAIMER } from "../../src/contracts/safety-copy";
+import { readJourneyStreak } from "../../src/lib/continuity-storage";
 import {
   readContinueReading,
   type ContinueReadingState,
@@ -66,10 +66,19 @@ function TodayScreenInner() {
   const [continueReading, setContinueReading] = useState<ContinueReadingState | null>(
     null,
   );
+  const [streak, setStreak] = useState(0);
+  const [weekRev, setWeekRev] = useState(0);
 
   const quietLine = useMemo(
     () => QUIET_LINES[Math.floor(Date.now() / 60_000) % QUIET_LINES.length],
     [tick],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setWeekRev((n) => n + 1);
+      void readJourneyStreak().then(setStreak);
+    }, []),
   );
 
   useFocusEffect(
@@ -97,9 +106,7 @@ function TodayScreenInner() {
     return data.schedule.nextAtEpochMs - Date.now();
   }, [data, tick]);
 
-  const isFriday = new Date().getDay() === 5;
-  const showRamadanCard =
-    Boolean(data && "ok" in data && data.ok && data.isRamadanDay);
+  const prayerOk = Boolean(data && "ok" in data && data.ok);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -118,38 +125,41 @@ function TodayScreenInner() {
         }
       >
         <View style={styles.headerRow}>
-          <View style={styles.headerLeft}>
-            <MobileWordmark height={22} style={{ alignSelf: "flex-start", marginBottom: 4 }} />
-            <Text style={styles.h1}>Today</Text>
+          <Text style={styles.h1}>Today&apos;s Journey</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.streakPill} accessibilityLabel={`Journey streak ${streak} days`}>
+              <Ionicons name="flame" size={18} color={bronze} />
+              <Text style={styles.streakNum}>{streak}</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push(SETTINGS_PROFILE_ROUTE)}
+              style={styles.settingsIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              hitSlop={8}
+            >
+              <Ionicons name="settings-outline" size={24} color={emerald} />
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => router.push(SETTINGS_PROFILE_ROUTE)}
-            style={styles.settingsIconBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={24} color={emerald} />
-          </Pressable>
         </View>
 
+        <JourneyWeekStrip revision={weekRev} />
+
+        <DailyAyahCard />
+
+        <QuietReflectionSection promptLine={quietLine} />
+
         {isLoading ? (
-          <View style={styles.center} accessibilityRole="progressbar">
+          <View style={styles.prayerSlot} accessibilityRole="progressbar">
             <SkeletonHeroCard lines={3} />
-            <Text style={styles.loadingHint}>Arranging today&apos;s salah cadence with tenderness…</Text>
+            <Text style={styles.loadingHint}>Gathering salah times for your rhythm…</Text>
           </View>
-        ) : error ||
-          !data ||
-          !("ok" in data) ||
-          !data.ok ? (
-          <View style={styles.card}>
-            <Text style={styles.errorTitle}>Prayer rhythm is resting</Text>
+        ) : error || !data || !("ok" in data) || !data.ok ? (
+          <View style={styles.prayerFallback}>
+            <Text style={styles.errorTitle}>Next salah</Text>
             <Text style={styles.muted}>
-              Pull down softly to try again once your connection settles. Prayer itself is untouched —
-              only these timings need an online handshake.
-            </Text>
-            <Text style={styles.muted}>
-              If this keeps happening, open Prayer → Settings and confirm city or device location.
+              Prayer times need a quick online check. Pull to refresh after you reconnect, or tune city in
+              Settings → Prayer Preferences.
             </Text>
             {__DEV__ && data && "ok" in data && !data.ok && typeof (data as { error?: string }).error === "string" ? (
               <Text style={styles.devErr}>{(data as { error: string }).error}</Text>
@@ -161,53 +171,26 @@ function TodayScreenInner() {
               onPress={() => void refetch()}
               style={styles.btn}
               accessibilityRole="button"
-              accessibilityLabel="Retry loading Today"
+              accessibilityLabel="Retry loading prayer times"
             >
-              <Text style={styles.btnTxt}>
-                {isRefetching ? "Refreshing…" : "Retry"}
-              </Text>
+              <Text style={styles.btnTxt}>{isRefetching ? "Refreshing…" : "Retry"}</Text>
             </Pressable>
           </View>
         ) : (
-          <>
-            <TodayPrayerHero data={data} nextCountdownMs={nextMs} />
-
-            <Text style={styles.pullHint}>
-              Pull gently to refresh timings when you change location or reconnect.
-            </Text>
-
-            <QuietReflectionSection promptLine={quietLine} />
-
-            <ContinueReadingCard state={continueReading} />
-
-            <DailyAyahCard />
-
-            <DayContextCards
-              showFriday={isFriday}
-              showRamadan={showRamadanCard}
-              ramadanDay={data.ramadanDay ?? null}
-            />
-
-            <View style={styles.card}>
-              <Text style={styles.eyebrow}>Recent reflection</Text>
-              <Text style={styles.muted}>
-                Your reflections will appear here once notes are connected.
-              </Text>
-              <Pressable
-                onPress={() => router.push("/reflect")}
-                style={styles.linkBtnSecondary}
-              >
-                <Text style={styles.linkBtnTxtSec}>Open Reflect</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.disclaimer}>
-              <Text style={styles.disclaimerTxt}>
-                {DEENNOTES_SAFETY_DISCLAIMER}
-              </Text>
-            </View>
-          </>
+          <TodayPrayerHero data={data} nextCountdownMs={nextMs} />
         )}
+
+        {prayerOk ? (
+          <Text style={styles.pullHint}>
+            Pull gently to refresh when you travel or reconnect.
+          </Text>
+        ) : null}
+
+        <ContinueReadingCard state={continueReading} />
+
+        <View style={styles.disclaimer}>
+          <Text style={styles.disclaimerTxt}>{DEENNOTES_SAFETY_DISCLAIMER}</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -219,39 +202,45 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: spacing.xs,
+    gap: spacing.md,
   },
-  headerLeft: { flex: 1, gap: 2, marginRight: spacing.md },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  streakPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(184,134,11,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(184,134,11,0.35)",
+  },
+  streakNum: { fontSize: fontSizes.md, fontWeight: "800", color: ink, minWidth: 18 },
   h1: {
+    flex: 1,
     fontFamily: fontSerifHeading,
     fontSize: fontSizes.xxl,
     fontWeight: "600",
     color: ink,
   },
   settingsIconBtn: { padding: 4 },
-  center: { paddingVertical: 48, alignItems: "center", gap: spacing.md },
+  prayerSlot: { paddingVertical: spacing.sm, alignItems: "stretch", gap: spacing.sm },
   loadingHint: {
     fontSize: fontSizes.sm,
     color: muted,
     textAlign: "center",
     lineHeight: 20,
-    paddingHorizontal: spacing.md,
   },
-  card: {
+  prayerFallback: {
     backgroundColor: cardBg,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: border,
     padding: spacing.md,
     gap: spacing.xs,
-  },
-  eyebrow: {
-    fontSize: fontSizes.xs,
-    fontWeight: "800",
-    color: bronze,
-    textTransform: "uppercase",
-    letterSpacing: 1,
   },
   muted: { fontSize: fontSizes.sm, color: muted, lineHeight: 20 },
   devErr: { fontSize: fontSizes.xs, color: "#8b2942", marginTop: 4 },
@@ -267,18 +256,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnTxt: { color: "#fff", fontWeight: "700" },
-  linkBtnSecondary: {
-    marginTop: spacing.sm,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: emerald,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-    borderRadius: radii.pill,
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  linkBtnTxtSec: { color: emerald, fontWeight: "700", fontSize: fontSizes.md },
   pullHint: {
     fontSize: fontSizes.sm,
     color: muted,

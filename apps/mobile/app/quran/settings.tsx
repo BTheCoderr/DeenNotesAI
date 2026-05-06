@@ -7,6 +7,7 @@ import { FALLBACK_MOBILE_RECITER_ID, fetchRecitations } from "../../src/api/qura
 import { CalmPulseBlock } from "../../src/components/skeleton/CalmSkeleton";
 import { REFLECTION_LANGUAGE_OPTIONS } from "../../src/contracts/quran-preferences";
 import type { QuranPreferenceContract, ReflectionLanguageCode } from "../../src/contracts/quran-preferences";
+import { usePremium } from "../../src/hooks/usePremium";
 import {
   readMobileQuranPrefs,
   writeMobileQuranPrefs,
@@ -33,6 +34,9 @@ import {
 } from "../../src/theme";
 
 export default function QuranSettingsScreen() {
+  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
+  const offlineDownloadsUnlocked = !purchasesAvailable || isPremium;
+  const ramadanReadingUnlocked = offlineDownloadsUnlocked;
   const [loading, setLoading] = useState(true);
   const [prefs, setPrefs] = useState<QuranPreferenceContract | null>(null);
   const [lang, setLang] = useState<ReflectionLanguageCode>("en");
@@ -169,6 +173,10 @@ export default function QuranSettingsScreen() {
                   key={code}
                   style={[styles.miniChip, active && styles.miniChipOn]}
                   onPress={() => {
+                    if (code === "taraweeh" && !ramadanReadingUnlocked) {
+                      openPaywall("ramadan_planning");
+                      return;
+                    }
                     setSlice(code);
                     void writePreferredReadingSlice(code);
                     void persist({ offlineIntent: "planned" });
@@ -272,7 +280,13 @@ export default function QuranSettingsScreen() {
             </View>
             <Switch
               value={autoDl}
-              onValueChange={(v) => void persist({ autoDownloadContinueSurah: v })}
+              onValueChange={(v) => {
+                if (v && !offlineDownloadsUnlocked) {
+                  openPaywall("offline_quran_audio");
+                  return;
+                }
+                void persist({ autoDownloadContinueSurah: v });
+              }}
               trackColor={{ true: emerald, false: border }}
             />
           </View>
@@ -283,8 +297,13 @@ export default function QuranSettingsScreen() {
           <Text style={styles.muted}>Approximate MB before older files soften away (LRU).</Text>
           <TextInput
             keyboardType="number-pad"
+            editable={offlineDownloadsUnlocked}
             value={String(cacheMb)}
             onChangeText={(t) => {
+              if (!offlineDownloadsUnlocked) {
+                openPaywall("offline_quran_audio");
+                return;
+              }
               const n = Number(t.replace(/[^\d]/g, ""));
               if (!Number.isFinite(n) || !t.trim()) return;
               void persist({ audioMaxCacheMb: n });

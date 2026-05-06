@@ -54,3 +54,26 @@ export async function returnedToday(now = new Date()): Promise<boolean> {
   const today = localCalendarDayKey(now);
   return row.visitLocalDays[0] === today;
 }
+
+/**
+ * Consecutive local calendar days ending today that have a continuity visit recorded.
+ */
+export async function readJourneyStreak(now = new Date()): Promise<number> {
+  const row = await readRow();
+  const logged = new Set(row.visitLocalDays);
+  let streak = 0;
+  const cursor = new Date(now);
+  cursor.setHours(12, 0, 0, 0);
+  while (streak < 365) {
+    const key = localCalendarDayKey(cursor);
+    if (!logged.has(key)) break;
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+export async function readVisitDaySet(): Promise<ReadonlySet<string>> {
+  const row = await readRow();
+  return new Set(row.visitLocalDays);
+}

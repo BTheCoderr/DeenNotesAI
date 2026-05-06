@@ -97,5 +97,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           fallbackToCacheTimeout: 0,
         }
       : config.updates,
+    extra: {
+      ...(typeof config.extra === "object" && config.extra !== null && !Array.isArray(config.extra)
+        ? (config.extra as Record<string, unknown>)
+        : {}),
+      revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY?.trim() ?? "",
+      revenueCatPremiumEntitlement: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_PREMIUM?.trim() ?? "",
+      appTermsUrl: process.env.EXPO_PUBLIC_APP_TERMS_URL?.trim() ?? "",
+      appPrivacyUrl: process.env.EXPO_PUBLIC_APP_PRIVACY_URL?.trim() ?? "",
+      betaFeedbackEmail: process.env.EXPO_PUBLIC_BETA_FEEDBACK_EMAIL?.trim() ?? "",
+    },
   };
 };

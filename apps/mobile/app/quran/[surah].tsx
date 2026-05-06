@@ -8,6 +8,7 @@ import { useChapters } from "../../src/api/hooks/useChapters";
 import type { ChapterVersesResponse } from "../../src/api/types";
 import { QuranSurahReader } from "../../src/components/quran/QuranSurahReader";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
+import { usePremium } from "../../src/hooks/usePremium";
 import { readContinueReading } from "../../src/lib/quran-continue-reading";
 import { safeBack } from "../../src/lib/navigation/safe-back";
 import { readCachedChapterVerses } from "../../src/lib/quran-offline-cache";
@@ -26,6 +27,8 @@ function QuranReaderRouteInner() {
   const { surah } = useLocalSearchParams<{ surah: string }>();
   const router = useRouter();
   const navigation = useNavigation();
+  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
+  const offlineAudioUnlocked = !purchasesAvailable || isPremium;
   const sidRaw = Array.isArray(surah) ? surah[0] : surah;
   const chapterNum = Number(sidRaw);
   const chapterId =
@@ -92,6 +95,8 @@ function QuranReaderRouteInner() {
       hadCachedVersesFile={Boolean(cachedPayload?.verses?.length)}
       initialResumeAyah={resumeAyah}
       showOfflineRibbon={showOfflineRibbon}
+      offlineAudioUnlocked={offlineAudioUnlocked}
+      onRequestOfflineAudioPremium={() => openPaywall("offline_quran_audio")}
     />
   );
 }

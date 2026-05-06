@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -16,6 +17,7 @@ import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { formatDurationShort } from "../../src/lib/khutbah-compose";
 import { commitKhutbahRecording } from "../../src/lib/khutbah-recordings-storage";
 import { safeBack } from "../../src/lib/navigation/safe-back";
+import { usePremium } from "../../src/hooks/usePremium";
 import {
   border,
   bronze,
@@ -54,6 +56,7 @@ function WaveformPlaceholder({ active }: { active: boolean }) {
 function KhutbahRecordingSessionScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const premium = usePremium();
   const {
     phase,
     elapsedMs,
@@ -136,6 +139,38 @@ function KhutbahRecordingSessionScreen() {
     }
     return "Capture what you can; you can add written notes when you craft the reflection.";
   }, [permissionDenied, supportsPauseResume]);
+
+  const gateRecording =
+    premium.purchasesAvailable && premium.isHydrated && !premium.isPremium;
+
+  if (!premium.isHydrated) {
+    return (
+      <SafeAreaView style={[styles.safe, { justifyContent: "center", alignItems: "center" }]} edges={["top", "bottom", "left", "right"]}>
+        <ActivityIndicator size="large" color={emerald} />
+      </SafeAreaView>
+    );
+  }
+
+  if (gateRecording) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
+        <View style={styles.inner}>
+          <Text style={styles.overline}>DeenNotes Plus</Text>
+          <Text style={styles.title}>Khutbah recording</Text>
+          <Text style={styles.lead}>
+            Local-first khutbah capture and crafting stays with subscribers so we can steward storage, transcripts, and
+            privacy thoughtfully.
+          </Text>
+          <Pressable style={styles.primary} onPress={() => premium.openPaywall("khutbah_recording")}>
+            <Text style={styles.primaryTxt}>Explore Plus calmly</Text>
+          </Pressable>
+          <Pressable style={styles.ghost} onPress={() => safeBack(router, navigation, "/new-sheet")}>
+            <Text style={styles.ghostTxt}>Return to New reflection</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>

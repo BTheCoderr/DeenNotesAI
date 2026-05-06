@@ -9,17 +9,28 @@ export default function SettingsFeedbackScreen() {
   return (
     <SettingsDocScreen title="Feedback">
       <P>
-        Tell us what felt reverent and what interrupted your flow — especially around prayer timing, Qur&apos;an reading, or
-        reflection capture after jumu&apos;ah.
+        We read every message with care. Send bugs, feature ideas, prayer-time surprises, Qur&apos;an reader or audio
+        quirks, subscription or restore issues, or general thoughts on how DeenNotes should feel calmer and more respectful.
       </P>
-      <Pressable style={styles.btn} onPress={contact}>
-        <Text style={styles.btnTxt}>Open contact page</Text>
+      <P>The contact form opens in your browser — describe what you expected and what you saw so we can reproduce it.</P>
+      <Pressable style={styles.btn} onPress={contact} accessibilityRole="button" accessibilityLabel="Open feedback form">
+        <Text style={styles.btnTxt}>Open contact form</Text>
       </Pressable>
     </SettingsDocScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: { alignSelf: "flex-start", marginTop: spacing.md },
+  btn: {
+    alignSelf: "flex-start",
+    marginTop: spacing.md,
+    borderWidth: 2,
+    borderColor: emerald,
+    borderRadius: 999,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: 48,
+    justifyContent: "center",
+  },
   btnTxt: { fontSize: fontSizes.md, fontWeight: "800", color: emerald },
 });

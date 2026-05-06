@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 
+import { AppBackHeaderButton } from "../../src/components/stack/AppBackHeaderButton";
 import { emerald, stone } from "../../src/theme";
 
 export default function SettingsLayout() {
@@ -10,10 +11,17 @@ export default function SettingsLayout() {
         headerStyle: { backgroundColor: stone },
         headerTintColor: emerald,
         headerTitleStyle: { color: emerald, fontWeight: "700" },
+        headerLeft: () => <AppBackHeaderButton fallback="/settings" accessibilityLabel="Back to settings list" />,
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Settings" }} />
-      <Stack.Screen name="prayer" options={{ title: "Prayer & reminders" }} />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "Settings",
+          headerLeft: () => <AppBackHeaderButton fallback="/(tabs)" accessibilityLabel="Close settings" />,
+        }}
+      />
+      <Stack.Screen name="prayer" options={{ title: "Prayer Preferences" }} />
       <Stack.Screen name="location" options={{ title: "Location" }} />
       <Stack.Screen name="hijri" options={{ title: "Hijri & Ramadan" }} />
       <Stack.Screen name="quran" options={{ title: "Quran preferences" }} />
@@ -27,7 +35,8 @@ export default function SettingsLayout() {
       <Stack.Screen name="about" options={{ title: "About" }} />
       <Stack.Screen name="faq" options={{ title: "FAQ" }} />
       <Stack.Screen name="feedback" options={{ title: "Feedback" }} />
-      <Stack.Screen name="invite" options={{ title: "Invite" }} />
+      <Stack.Screen name="invite" options={{ title: "Invite a friend" }} />
+      <Stack.Screen name="beta-feedback" options={{ title: "Beta feedback" }} />
     </Stack>
   );
 }

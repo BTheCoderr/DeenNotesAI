@@ -23,6 +23,7 @@ import {
 } from "../../src/lib/quran-continue-reading";
 import { readMobileQuranPrefs } from "../../src/lib/mobile-quran-prefs";
 import { offlineReflectionSubtitle } from "../../src/lib/quran-meta";
+import { usePremium } from "../../src/hooks/usePremium";
 import type { Chapter } from "../../src/api/types";
 import { FALLBACK_MOBILE_RECITER_ID } from "../../src/api/quran";
 import {
@@ -41,6 +42,8 @@ import {
 
 function QuranSurahListScreen() {
   const router = useRouter();
+  const { isPremium, purchasesAvailable } = usePremium();
+  const offlineAudioPrefsUnlocked = !purchasesAvailable || isPremium;
   const { data, isLoading, error, isOfflineListFallback } = useChapters();
   const playback = useQuranPlayback();
   const playbackReserve = playback.hasActiveMiniStrip ? 132 : 0;
@@ -70,7 +73,7 @@ function QuranSurahListScreen() {
           readContinueReading(),
           readMobileQuranPrefs(),
         ]);
-        if (cancelled || !prefs.autoDownloadContinueSurah || !reading) return;
+        if (cancelled || !prefs.autoDownloadContinueSurah || !reading || !offlineAudioPrefsUnlocked) return;
         const rec = prefs.reciterId?.trim() || FALLBACK_MOBILE_RECITER_ID;
         const ys: number[] = [];
         const capAyah = Math.min(reading.ayah + 6, reading.ayah + 40);
@@ -88,7 +91,7 @@ function QuranSurahListScreen() {
       return () => {
         cancelled = true;
       };
-    }, []),
+    }, [offlineAudioPrefsUnlocked]),
   );
 
   const filtered = useMemo(() => {

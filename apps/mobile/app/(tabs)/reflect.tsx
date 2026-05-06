@@ -18,6 +18,7 @@ import { SkeletonReflectList } from "../../src/components/skeleton/CalmSkeleton"
 import { labelForNoteType } from "../../src/contracts/note-types";
 import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
+import { usePremium } from "../../src/hooks/usePremium";
 import {
   readReflectionLibrary,
   type ReflectionLibraryItem,
@@ -73,9 +74,11 @@ function mapCloudToLibrary(
 function ReflectScreenInner() {
   const router = useRouter();
   const auth = useMobileSession();
+  const { isPremium, purchasesAvailable, isHydrated, openPaywall } = usePremium();
   const hasSignedIn = Boolean(auth.ready && auth.accessToken);
+  const cloudLibraryUnlocked = !purchasesAvailable || isPremium;
 
-  const listQuery = useDeenNotesList(hasSignedIn);
+  const listQuery = useDeenNotesList(hasSignedIn && cloudLibraryUnlocked);
   const [localRows, setLocalRows] = useState<ReflectionLibraryItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -95,11 +98,16 @@ function ReflectScreenInner() {
   }, [listQuery.data]);
 
   const merged = useMemo((): ReflectionLibraryItem[] => {
-    if (hasSignedIn && !listQuery.isError && listQuery.data !== undefined) {
-      return cloudRows;
+    if (!hasSignedIn) return localRows;
+    if (cloudLibraryUnlocked && !listQuery.isError && listQuery.data !== undefined) {
+      const cloudIds = new Set(cloudRows.map((r) => r.id));
+      const localsOnly = localRows.filter((r) => !cloudIds.has(r.id));
+      return [...cloudRows, ...localsOnly].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
     }
     return localRows;
-  }, [hasSignedIn, listQuery.isError, listQuery.data, cloudRows, localRows]);
+  }, [hasSignedIn, cloudLibraryUnlocked, listQuery.isError, listQuery.data, cloudRows, localRows]);
 
   const recent = merged.slice(0, 3);
 
@@ -107,14 +115,18 @@ function ReflectScreenInner() {
     setRefreshing(true);
     try {
       reloadLocal();
-      if (hasSignedIn) await listQuery.refetch();
+      if (hasSignedIn && cloudLibraryUnlocked) await listQuery.refetch();
     } finally {
       setRefreshing(false);
     }
-  }, [hasSignedIn, listQuery, reloadLocal]);
+  }, [hasSignedIn, cloudLibraryUnlocked, listQuery, reloadLocal]);
 
   const showInitialCloudLoad =
-    hasSignedIn && listQuery.isPending && localRows.length === 0 && !listQuery.isError;
+    hasSignedIn &&
+    cloudLibraryUnlocked &&
+    listQuery.isPending &&
+    localRows.length === 0 &&
+    !listQuery.isError;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -132,9 +144,24 @@ function ReflectScreenInner() {
       </View>
       <Text style={styles.sub}>
         {hasSignedIn
-          ? "Reflections from your account — same notes as the web app."
+          ? cloudLibraryUnlocked
+            ? "Reflections from your account — same notes as the web app."
+            : "On-device reflections stay with you. DeenNotes Plus mirrors your full signed-in library here."
           : "Signed-out view shows on-device placeholders. Sign in from Settings to load your library."}
       </Text>
+
+      {hasSignedIn && purchasesAvailable && isHydrated && !isPremium ? (
+        <Pressable
+          onPress={() => openPaywall("reflect_cloud_sync")}
+          style={styles.syncBanner}
+          accessibilityRole="button"
+        >
+          <Text style={styles.syncBannerTitle}>Cloud library on this tab</Text>
+          <Text style={styles.syncBannerBody}>
+            Tap to learn about DeenNotes Plus — full history sync across calm visits.
+          </Text>
+        </Pressable>
+      ) : null}
 
       <Pressable
         style={styles.newBtn}
@@ -156,7 +183,7 @@ function ReflectScreenInner() {
           accessibilityLabel="Reflection list"
           refreshControl={
             <RefreshControl
-              refreshing={refreshing || (hasSignedIn && listQuery.isFetching)}
+              refreshing={refreshing || (hasSignedIn && cloudLibraryUnlocked && listQuery.isFetching)}
               onRefresh={() => void onRefresh()}
               tintColor={emerald}
             />
@@ -288,6 +315,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   sub: { fontSize: fontSizes.sm, color: muted, marginBottom: spacing.md, lineHeight: 20 },
+  syncBanner: {
+    alignSelf: "stretch",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: emerald,
+    backgroundColor: "rgba(18,122,99,0.08)",
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  syncBannerTitle: { fontSize: fontSizes.sm, fontWeight: "800", color: emerald },
+  syncBannerBody: { fontSize: fontSizes.xs, color: muted, lineHeight: 18 },
   newBtn: {
     alignSelf: "flex-start",
     backgroundColor: emerald,

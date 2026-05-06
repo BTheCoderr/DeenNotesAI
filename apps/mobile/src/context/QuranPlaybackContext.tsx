@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FALLBACK_MOBILE_RECITER_ID, fetchVerseAudio } from "../api/quran";
 import { mobileTabFloatingBottomOffset } from "../lib/layout/tab-bar";
+import { logProductEvent } from "../lib/analytics/mobile-product-events";
 import { getAudioCacheRow } from "../lib/quran/audio-cache";
 import {
   clearLastRecitation,
@@ -210,6 +211,9 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
         }
 
         const row = await getAudioCacheRow(reciter, args.surahId, args.ayah);
+        logProductEvent("quran_listen_start", {
+          playback_source: row?.status === "ready" && row.localUri ? "cache" : "stream",
+        });
         if (row?.status === "ready" && row.localUri) {
           await attachSound(row.localUri, resumeMs);
         } else {

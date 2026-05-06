@@ -20,8 +20,8 @@ export function DailyAyahCard() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.kicker}>Daily ayah</Text>
-      <Text style={styles.h2}>One verse, anchored to today</Text>
+      <Text style={styles.kicker}>Today&apos;s devotional</Text>
+      <Text style={styles.h2}>One verse, anchored gently to today</Text>
 
       {q.isPending ? (
         <View style={styles.center}>

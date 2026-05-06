@@ -20,6 +20,11 @@ export function P({ children }: { children: ReactNode }) {
   return <Text style={styles.p}>{children}</Text>;
 }
 
+/** FAQ / section prompts — short questions above body copy. */
+export function Q({ children }: { children: ReactNode }) {
+  return <Text style={styles.q}>{children}</Text>;
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: stone },
   scroll: { padding: spacing.xl, paddingBottom: 48, gap: spacing.md },
@@ -30,6 +35,13 @@ const styles = StyleSheet.create({
     color: ink,
   },
   body: { gap: spacing.md },
+  q: {
+    fontSize: fontSizes.md,
+    fontWeight: "800",
+    color: ink,
+    lineHeight: 22,
+    marginBottom: -spacing.xs,
+  },
   p: { fontSize: fontSizes.md, color: muted, lineHeight: 24 },
   footer: { fontSize: fontSizes.xs, color: emerald, fontWeight: "700", marginTop: spacing.lg },
 });

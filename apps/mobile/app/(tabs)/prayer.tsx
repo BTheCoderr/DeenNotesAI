@@ -23,6 +23,7 @@ import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { CalmPulseBlock } from "../../src/components/skeleton/CalmSkeleton";
 import { LOCATION_FALLBACK } from "../../src/contracts/prayer-preferences";
 import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
+import { usePremium } from "../../src/hooks/usePremium";
 import { formatCountdown } from "../../src/lib/format-time";
 import {
   refreshStoredDeviceLocation,
@@ -57,18 +58,20 @@ import {
 
 const FALLBACK_LABEL = "Providence, Rhode Island, United States";
 
-type Seg = "today" | "ramadan" | "calendar" | "settings";
+type Seg = "today" | "ramadan" | "calendar" | "preferences";
 
 const SEGMENTS: { id: Seg; label: string }[] = [
   { id: "today", label: "Today" },
   { id: "ramadan", label: "Ramadan" },
   { id: "calendar", label: "Calendar" },
-  { id: "settings", label: "Settings" },
+  { id: "preferences", label: "Preferences" },
 ];
 
 function PrayerScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
+  const plannerUnlocked = !purchasesAvailable || isPremium;
   const [section, setSection] = useState<Seg>("today");
   const [tick, setTick] = useState(0);
   const [city, setCity] = useState<string>(LOCATION_FALLBACK.city);
@@ -83,8 +86,8 @@ function PrayerScreen() {
   const [permissionLine, setPermissionLine] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch, isRefetching } = usePrayerToday();
-  const ramadanQ = usePrayerRamadan({ enabled: section === "ramadan" });
-  const monthQ = usePrayerMonth({ enabled: section === "calendar" });
+  const ramadanQ = usePrayerRamadan({ enabled: section === "ramadan" && plannerUnlocked });
+  const monthQ = usePrayerMonth({ enabled: section === "calendar" && plannerUnlocked });
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -265,7 +268,7 @@ function PrayerScreen() {
               <View style={styles.card}>
                 <Text style={styles.calmOfflineTitle}>Prayer times are pausing</Text>
                 <Text style={styles.calmOfflineBody}>
-                  Check your connection, or try manual city under Settings below. Nothing is wrong with salah itself — only this fetch needs a quieter moment online.
+                  Check your connection, or try manual city under Preferences below. Nothing is wrong with salah itself — only this fetch needs a quieter moment online.
                 </Text>
                 {__DEV__ && error instanceof Error ? (
                   <Text style={styles.bannerMeta}>{error.message}</Text>
@@ -306,7 +309,7 @@ function PrayerScreen() {
               <View style={styles.card}>
                 <Text style={styles.calmOfflineTitle}>Prayer times need a quieter moment online</Text>
                 <Text style={styles.calmOfflineBody}>
-                  Pull down softly to retry, or check Settings → Location if your city shifted. Technical messages stay out of view so the screen stays peaceful.
+                  Pull down softly to retry, or open the Settings (gear) menu → Location if your city shifted. Technical messages stay out of view so the screen stays peaceful.
                 </Text>
                 {__DEV__ && typeof data.error === "string" ? (
                   <Text style={styles.bannerMeta}>{data.error}</Text>
@@ -327,91 +330,111 @@ function PrayerScreen() {
         ) : null}
 
         {section === "ramadan" ? (
-          <View style={styles.card}>
-            <Text style={styles.k}>Ramadan window</Text>
-            {ramadanQ.isLoading ? (
-              <View style={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-                <CalmPulseBlock height={48} accessibilityLabel="Ramadan timetable placeholder" />
-                <CalmPulseBlock height={12} style={{ width: "92%" }} />
-              </View>
-            ) : ramadanQ.error ? (
-              <>
-                <Text style={styles.muted}>
-                  Ramadan dates could not load right now. Pull to refresh on Today or check your connection.
-                </Text>
-                {__DEV__ && ramadanQ.error instanceof Error ? (
-                  <Text style={styles.bannerMeta}>{ramadanQ.error.message}</Text>
-                ) : null}
-              </>
-            ) : ramadanQ.data &&
-              "ok" in ramadanQ.data &&
-              ramadanQ.data.ok ? (
-              <>
-                <Text style={styles.body}>
-                  Hijri year reference: {ramadanQ.data.hijriYear}.
-                  Gregorian overlap month:{" "}
-                  {ramadanQ.data.gregorianMonth ?? "—"} /{" "}
-                  {ramadanQ.data.gregorianYear ?? "—"}.
-                </Text>
-                <Text style={styles.muted}>
-                  Detailed fasting boundaries depend on your locality and
-                  sighting conventions — full rhythm tooling arrives in a later
-                  pass. Times for today still reflect your Prayer tab settings.
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.muted}>
-                Ramadan data unavailable for this request.
+          plannerUnlocked ? (
+            <View style={styles.card}>
+              <Text style={styles.k}>Ramadan window</Text>
+              {ramadanQ.isLoading ? (
+                <View style={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+                  <CalmPulseBlock height={48} accessibilityLabel="Ramadan timetable placeholder" />
+                  <CalmPulseBlock height={12} style={{ width: "92%" }} />
+                </View>
+              ) : ramadanQ.error ? (
+                <>
+                  <Text style={styles.muted}>
+                    Ramadan dates could not load right now. Pull to refresh on Today or check your connection.
+                  </Text>
+                  {__DEV__ && ramadanQ.error instanceof Error ? (
+                    <Text style={styles.bannerMeta}>{ramadanQ.error.message}</Text>
+                  ) : null}
+                </>
+              ) : ramadanQ.data &&
+                "ok" in ramadanQ.data &&
+                ramadanQ.data.ok ? (
+                <>
+                  <Text style={styles.body}>
+                    Hijri year reference: {ramadanQ.data.hijriYear}.
+                    Gregorian overlap month:{" "}
+                    {ramadanQ.data.gregorianMonth ?? "—"} /{" "}
+                    {ramadanQ.data.gregorianYear ?? "—"}.
+                  </Text>
+                  <Text style={styles.muted}>
+                    Detailed fasting boundaries depend on your locality and sighting conventions — stay gentle with your
+                    community&apos;s guidance. Times for today still reflect your Prayer tab baseline.
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.muted}>Ramadan data unavailable for this request.</Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.k}>Ramadan window</Text>
+              <Text style={styles.body}>
+                Month-aware overlays, tarawīh scaffolding, and this seasonal card stay with DeenNotes Plus subscribers.
               </Text>
-            )}
-          </View>
+              <Pressable style={styles.primaryBtn} onPress={() => openPaywall("ramadan_planning")}>
+                <Text style={styles.primaryBtnTxt}>Explore Plus calmly</Text>
+              </Pressable>
+            </View>
+          )
         ) : null}
 
         {section === "calendar" ? (
-          <View style={styles.card}>
-            <Text style={styles.k}>Month at a glance</Text>
-            {monthQ.isLoading ? (
-              <View style={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-                <CalmPulseBlock height={52} accessibilityLabel="Prayer month grid placeholder" />
-                <CalmPulseBlock height={12} style={{ width: "84%" }} />
-                <CalmPulseBlock height={12} style={{ width: "76%" }} />
-              </View>
-            ) : monthQ.error ? (
-              <>
-                <Text style={styles.muted}>
-                  The month view could not load. Check your connection or try again in a moment.
-                </Text>
-                {__DEV__ && monthQ.error instanceof Error ? (
-                  <Text style={styles.bannerMeta}>{monthQ.error.message}</Text>
-                ) : null}
-              </>
-            ) : monthQ.data?.days?.length ? (
-              <>
-                <Text style={styles.body}>
-                  {monthQ.data.locationLabel} · {monthQ.data.month}/
-                  {monthQ.data.year}
-                </Text>
-                {monthQ.data.days.slice(0, 7).map((d) => (
-                  <View key={d.gregorianReadable} style={styles.calRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.calG}>{d.gregorianReadable}</Text>
-                      <Text style={styles.calH}>{d.hijriLabel}</Text>
+          plannerUnlocked ? (
+            <View style={styles.card}>
+              <Text style={styles.k}>Month at a glance</Text>
+              {monthQ.isLoading ? (
+                <View style={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+                  <CalmPulseBlock height={52} accessibilityLabel="Prayer month grid placeholder" />
+                  <CalmPulseBlock height={12} style={{ width: "84%" }} />
+                  <CalmPulseBlock height={12} style={{ width: "76%" }} />
+                </View>
+              ) : monthQ.error ? (
+                <>
+                  <Text style={styles.muted}>
+                    The month view could not load. Check your connection or try again in a moment.
+                  </Text>
+                  {__DEV__ && monthQ.error instanceof Error ? (
+                    <Text style={styles.bannerMeta}>{monthQ.error.message}</Text>
+                  ) : null}
+                </>
+              ) : monthQ.data?.days?.length ? (
+                <>
+                  <Text style={styles.body}>
+                    {monthQ.data.locationLabel} · {monthQ.data.month}/{monthQ.data.year}
+                  </Text>
+                  {monthQ.data.days.slice(0, 7).map((d) => (
+                    <View key={d.gregorianReadable} style={styles.calRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.calG}>{d.gregorianReadable}</Text>
+                        <Text style={styles.calH}>{d.hijriLabel}</Text>
+                      </View>
+                      <Text style={styles.calT}>{d.timings.Fajr}</Text>
+                      <Text style={styles.calT}>{d.timings.Maghrib}</Text>
                     </View>
-                    <Text style={styles.calT}>{d.timings.Fajr}</Text>
-                    <Text style={styles.calT}>{d.timings.Maghrib}</Text>
-                  </View>
-                ))}
-                <Text style={styles.muted}>
-                  Showing the first seven days — full grid interactions come later.
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.muted}>No days in response.</Text>
-            )}
-          </View>
+                  ))}
+                  <Text style={styles.muted}>
+                    Showing the first seven days — full grid interactions come later.
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.muted}>No days in response.</Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.k}>Month at a glance</Text>
+              <Text style={styles.body}>
+                Planner-style month strips stay with DeenNotes Plus — today&apos;s salah times remain open for everyone.
+              </Text>
+              <Pressable style={styles.primaryBtn} onPress={() => openPaywall("ramadan_planning")}>
+                <Text style={styles.primaryBtnTxt}>Unlock planner tools</Text>
+              </Pressable>
+            </View>
+          )
         ) : null}
 
-        {section === "settings" ? (
+        {section === "preferences" ? (
           <View style={styles.gap}>
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Location</Text>
@@ -519,12 +542,15 @@ function PrayerScreen() {
               </View>
             </View>
 
-            <PrayerReminderPrefs />
+            <PrayerReminderPrefs
+              advancedUnlocked={plannerUnlocked}
+              onRequestAdvanced={() => openPaywall("advanced_prayer_reminders")}
+            />
 
             <View style={styles.banner}>
               <Text style={styles.bannerTitle}>Notifications</Text>
               <Text style={styles.bannerBody}>
-                Quiet local reminders timed to your salah — no marketing. You can decline; you can revisit this later in Settings.
+                Quiet local reminders timed to your salah — no marketing. You can decline; you can try again anytime from Prayer → Preferences.
               </Text>
               {permissionLine ? (
                 <Text style={styles.bannerMeta}>System permission: {permissionLine}</Text>
