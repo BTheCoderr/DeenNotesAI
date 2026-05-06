@@ -4,7 +4,7 @@ import type { VerseKey } from "@quranjs/api";
 
 import {
   defaultVerseReciterId,
-  isMockQuranMode,
+  usesOfflineQuranDataset,
 } from "./config";
 import { logQuranSdkError, withQuranSdk } from "./client";
 import { mockRecitations, mockVerseAudio } from "./mock/mock-data";
@@ -17,7 +17,7 @@ export { defaultVerseReciterId };
 export async function fetchRecitationResources(): Promise<
   RecitationResourceDto[]
 > {
-  if (isMockQuranMode()) return mockRecitations();
+  if (usesOfflineQuranDataset()) return mockRecitations();
 
   try {
     const list = await withQuranSdk((c) =>
@@ -44,7 +44,7 @@ export async function fetchVerseAudioPayload(
   const keyStr = parseVerseKey(surah, ayah);
   if (!keyStr) return null;
 
-  if (isMockQuranMode()) {
+  if (usesOfflineQuranDataset()) {
     return mockVerseAudio(surah, ayah, reciterId);
   }
 

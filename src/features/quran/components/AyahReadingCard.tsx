@@ -22,6 +22,15 @@ type Props = {
   onPinTafsirMoment?: () => void;
   onOpenTafsir: () => void;
   onListen: () => void;
+  /** Verbatim QuranEnc row — never altered in UI. */
+  quranEncBlock?: {
+    translation: string;
+    footnotes?: string | null;
+    metaLine: string;
+  } | null;
+  onListenQuranEnc?: () => void;
+  /** When false, hide translation-audio affordance (e.g. mock build). */
+  quranEncTranslationAudioEnabled?: boolean;
 };
 
 export function AyahReadingCard({
@@ -39,12 +48,26 @@ export function AyahReadingCard({
   onPinTafsirMoment,
   onOpenTafsir,
   onListen,
+  quranEncBlock,
+  onListenQuranEnc,
+  quranEncTranslationAudioEnabled = true,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const translationText = verse.translations?.[0]?.text?.trim() ?? "";
+  const qeText = quranEncBlock?.translation?.trim() ?? "";
 
   async function handleCopy() {
-    const blob = `${verse.textUthmani}\n${translationText}`.trim();
+    const chunks: string[] = [verse.textUthmani || ""];
+    if (qeText) {
+      chunks.push("", `[QuranEnc — ${quranEncBlock?.metaLine ?? "verbatim"}]`, qeText);
+      if (quranEncBlock?.footnotes?.trim()) {
+        chunks.push("", quranEncBlock.footnotes.trim());
+      }
+    }
+    if (translationText) {
+      chunks.push("", "[Quran Foundation]", translationText);
+    }
+    const blob = chunks.join("\n").trim();
     try {
       await navigator.clipboard.writeText(blob);
     } catch {
@@ -53,12 +76,13 @@ export function AyahReadingCard({
   }
 
   async function handleShare() {
+    const preview = (qeText || translationText).slice(0, 220);
     const url = `${typeof window !== "undefined" ? window.location.origin : ""}/app/quran/${surahNumber}/${verse.verseNumber}`;
     try {
       if (navigator.share) {
         await navigator.share({
           title: `${surahDisplayName ?? "Quran"} ${surahNumber}:${verse.verseNumber}`,
-          text: translationText.slice(0, 200),
+          text: preview,
           url,
         });
         return;
@@ -115,6 +139,15 @@ export function AyahReadingCard({
           >
             Listen
           </button>
+          {onListenQuranEnc && quranEncTranslationAudioEnabled ? (
+            <button
+              type="button"
+              onClick={onListenQuranEnc}
+              className="rounded-full px-2 py-1 text-[0.65rem] font-semibold text-muted hover:bg-mint/40 hover:text-accent"
+            >
+              Listen in this language
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -140,15 +173,40 @@ export function AyahReadingCard({
       </p>
 
       {!focusMode ? (
-        verse.translations?.[0]?.text ? (
-          <p className="mt-5 text-sm leading-[1.7] text-ink/85 border-l-2 border-accent/25 pl-3">
-            {verse.translations[0].text}
-          </p>
-        ) : (
-          <p className="mt-4 text-xs text-muted italic">
-            Translation will appear once a resource loads.
-          </p>
-        )
+        <div className="mt-5 space-y-4">
+          {quranEncBlock?.translation ? (
+            <div className="rounded-2xl border border-black/[0.07] bg-mint/20 px-3.5 py-3">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-accent">
+                QuranEnc (verbatim)
+              </p>
+              <p className="text-[0.65rem] text-muted mt-1">{quranEncBlock.metaLine}</p>
+              <p className="mt-2 text-sm leading-[1.7] text-ink/90 whitespace-pre-wrap">
+                {quranEncBlock.translation}
+              </p>
+              {quranEncBlock.footnotes?.trim() ? (
+                <p className="mt-3 text-xs leading-relaxed text-ink/75 border-t border-black/[0.06] pt-3 whitespace-pre-wrap">
+                  {quranEncBlock.footnotes}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {verse.translations?.[0]?.text ? (
+            <div>
+              {quranEncBlock?.translation ? (
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-muted mb-1.5">
+                  Quran Foundation
+                </p>
+              ) : null}
+              <p className="text-sm leading-[1.7] text-ink/85 border-l-2 border-accent/25 pl-3">
+                {verse.translations[0].text}
+              </p>
+            </div>
+          ) : !quranEncBlock?.translation ? (
+            <p className="text-xs text-muted italic">
+              Translation will appear once a resource loads.
+            </p>
+          ) : null}
+        </div>
       ) : (
         <p className="mt-3 text-[0.65rem] text-muted uppercase tracking-[0.12em]">
           Translation paused in focus · tap Translate to soften back in

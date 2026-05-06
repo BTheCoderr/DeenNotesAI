@@ -4,11 +4,14 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { TranslationSelector } from "@/components/quran/TranslationSelector";
 import { DeenNotesLogo } from "@/components/brand/DeenNotesLogo";
+import { useQuranEncGroupedTranslationCatalog } from "@/features/quran/hooks/useQuranData";
 import {
   writeOnboardingToLocal,
   type OnboardingAnswers,
 } from "@/lib/onboarding-storage";
+import { readPreferredQuranEncTranslationKey } from "@/lib/browser/quranenc-preference";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -71,15 +74,29 @@ async function persistOnboardingRemote(answers: OnboardingAnswers) {
 export function OnboardingScreen() {
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState(0);
+  const {
+    languages: quranLanguages,
+    error: quranLangError,
+    loading: quranLangLoading,
+  } = useQuranEncGroupedTranslationCatalog();
+  const [onboardingQEKey, setOnboardingQEKey] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return readPreferredQuranEncTranslationKey() ?? null;
+  });
   const [purpose, setPurpose] = useState<string>(PURPOSE_OPTIONS[0]);
   const [ageGroup, setAgeGroup] = useState<string>(AGE_GROUPS[1]);
   const [userType, setUserType] = useState<string>(USER_TYPES[1]);
   const [struggles, setStruggles] = useState<string[]>([]);
 
+  useEffect(() => {
+    const k = readPreferredQuranEncTranslationKey();
+    setOnboardingQEKey(k ?? null);
+  }, [quranLanguages]);
+
   const [checks, setChecks] = useState([false, false, false]);
 
   useEffect(() => {
-    if (step !== 5) return;
+    if (step !== 6) return;
 
     const t0 = window.setTimeout(() => {
       setChecks((c) => [true, c[1], c[2]]);
@@ -93,7 +110,9 @@ export function OnboardingScreen() {
 
     const done = window.setTimeout(() => {
       const completedAt = new Date().toISOString();
+      const preferredKey = readPreferredQuranEncTranslationKey() ?? undefined;
       const answers: OnboardingAnswers = {
+        ...(preferredKey ? { preferredQuranEncTranslationKey: preferredKey } : {}),
         purpose,
         ageGroup,
         userType,
@@ -102,7 +121,7 @@ export function OnboardingScreen() {
       };
       writeOnboardingToLocal(answers);
       void persistOnboardingRemote(answers);
-      setStep(6);
+      setStep(7);
     }, 2600);
 
     return () => {
@@ -114,7 +133,7 @@ export function OnboardingScreen() {
   }, [step, purpose, ageGroup, userType, struggles]);
 
   useEffect(() => {
-    if (step === 5) {
+    if (step === 6) {
       setChecks([false, false, false]);
     }
   }, [step]);
@@ -125,12 +144,12 @@ export function OnboardingScreen() {
     );
   }
 
-  function advanceFromStep4() {
+  function advanceFromStep5Struggles() {
     if (struggles.length === 0) return;
-    setStep(5);
+    setStep(6);
   }
 
-  const canBack = step > 0 && step < 5;
+  const canBack = step > 0 && step < 6;
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 pb-20 space-y-8">
@@ -138,16 +157,16 @@ export function OnboardingScreen() {
         <DeenNotesLogo size="md" />
       </div>
 
-      {step > 0 && step < 5 ? (
+      {step > 0 && step < 6 ? (
         <div className="flex gap-2 justify-center px-4">
-          {[1, 2, 3, 4].map((n) => (
+          {[1, 2, 3, 4, 5].map((n) => (
             <motion.span
               key={n}
-              layout
+              layout={!reduceMotion}
               className={
                 step >= n
-                  ? "h-1.5 flex-1 rounded-full bg-accent max-w-[2.5rem]"
-                  : "h-1.5 flex-1 rounded-full bg-black/10 max-w-[2.5rem]"
+                  ? "h-1.5 flex-1 rounded-full bg-accent max-w-[2rem]"
+                  : "h-1.5 flex-1 rounded-full bg-black/10 max-w-[2rem]"
               }
               transition={{ type: "spring", stiffness: 380, damping: 32 }}
               aria-hidden
@@ -194,6 +213,51 @@ export function OnboardingScreen() {
 
       {step === 1 ? (
         <StepPanel
+          title="Which Qur’an meaning language resonates first?"
+          subtitle="Optional — QuranEnc multilingual packs stay verbatim. You can change this anytime in the reader sheet."
+        >
+          <div className="space-y-3" role="group" aria-label="QuranEnc translations">
+            {quranLangLoading ? (
+              <p className="text-sm text-muted text-center py-6">Loading translators…</p>
+            ) : null}
+            {quranLangError ? (
+              <p className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950">
+                {quranLangError} You can skip and pick Arabic + translation pairing later in Quran.
+              </p>
+            ) : null}
+            {!quranLangLoading && quranLanguages.length === 0 && !quranLangError ? (
+              <p className="rounded-2xl border border-black/[0.08] px-4 py-3 text-center text-sm text-muted">
+                No QuranEnc catalogs returned. Enable MOCK_QURANENC_API or check server configuration.
+              </p>
+            ) : null}
+            <p id="ob-quran-lang-heading" className="sr-only">
+              QuranEnc multilingual translations
+            </p>
+            {!quranLangLoading && quranLanguages.length > 0 ? (
+              <TranslationSelector
+                ariaLabelledBy="ob-quran-lang-heading"
+                compact
+                languageGroups={quranLanguages}
+                selectedKey={onboardingQEKey}
+                onSelectKey={(key) => {
+                  setOnboardingQEKey(key);
+                }}
+                onClearSelection={() => setOnboardingQEKey(null)}
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="w-full text-center text-xs font-semibold text-muted hover:text-accent"
+            >
+              Choose later · open settings in the reader anytime
+            </button>
+          </div>
+        </StepPanel>
+      ) : null}
+
+      {step === 2 ? (
+        <StepPanel
           title="What brings you to DeenNotes?"
           subtitle="Choose the option that fits best today—you can capture any kind of reflection later."
         >
@@ -210,7 +274,7 @@ export function OnboardingScreen() {
         </StepPanel>
       ) : null}
 
-      {step === 2 ? (
+      {step === 3 ? (
         <StepPanel title="What’s your age group?">
           <div className="space-y-2" role="radiogroup">
             {AGE_GROUPS.map((opt) => (
@@ -225,7 +289,7 @@ export function OnboardingScreen() {
         </StepPanel>
       ) : null}
 
-      {step === 3 ? (
+      {step === 4 ? (
         <StepPanel title="Which best describes you?">
           <div className="space-y-2" role="radiogroup">
             {USER_TYPES.map((opt) => (
@@ -240,7 +304,7 @@ export function OnboardingScreen() {
         </StepPanel>
       ) : null}
 
-      {step === 4 ? (
+      {step === 5 ? (
         <StepPanel title="What’s your biggest struggle with Islamic learning?" subtitle="Pick all that apply.">
           <div className="space-y-2">
             {STRUGGLES.map((opt) => {
@@ -270,10 +334,10 @@ export function OnboardingScreen() {
         </StepPanel>
       ) : null}
 
-      {step === 5 ? (
+      {step === 6 ? (
         <section className="text-center px-4 space-y-8 py-12">
           <div className="space-y-3">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-accent/30 border-t-accent animate-spin mx-auto" />
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-accent/30 border-t-accent motion-safe:animate-spin motion-reduce:animate-none mx-auto" />
             <h2 className="font-display text-xl font-semibold text-ink">
               Crafting your reflection space
             </h2>
@@ -286,7 +350,7 @@ export function OnboardingScreen() {
         </section>
       ) : null}
 
-      {step === 6 ? (
+      {step === 7 ? (
         <section className="text-center px-2 space-y-5 pb-8">
           <h2 className="font-display text-[1.75rem] font-semibold text-ink leading-snug">
             Your DeenNotes journey is ready.
@@ -305,7 +369,7 @@ export function OnboardingScreen() {
         </motion.div>
       </AnimatePresence>
 
-      {step >= 1 && step <= 4 ? (
+      {step >= 1 && step <= 5 ? (
         <div className="flex flex-col-reverse sm:flex-row gap-3 px-2 pt-2">
           <button
             type="button"
@@ -319,7 +383,7 @@ export function OnboardingScreen() {
           >
             Back
           </button>
-          {step < 4 ? (
+          {step < 5 ? (
             <button
               type="button"
               onClick={() => setStep((s) => s + 1)}
@@ -331,7 +395,7 @@ export function OnboardingScreen() {
             <button
               type="button"
               disabled={struggles.length === 0}
-              onClick={() => advanceFromStep4()}
+              onClick={() => advanceFromStep5Struggles()}
               className={
                 struggles.length === 0
                   ? "rounded-full bg-accent/35 px-8 py-3 text-sm font-semibold text-white cursor-not-allowed flex-1"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { NewNoteAyahSuggestion } from "@/components/notes/NewNoteAyahSuggestion";
 import { NOTE_TYPE_LABELS } from "@/lib/constants";
 import type { NoteTypeEnum } from "@/lib/database.types";
 import { NEW_NOTE_USE_CASES } from "@/lib/note-samples";
@@ -120,6 +121,20 @@ export function NewNoteForm({
             placeholder="Paste something you heard, read, or felt… Messy thoughts are okay."
             className="w-full min-h-[11rem] resize-y rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base text-stone-800 outline-none leading-relaxed placeholder:text-stone-400 transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
           />
+          <div className="space-y-2">
+            <NewNoteAyahSuggestion
+              rawInput={rawInput}
+              onApplySnippet={(snippet) =>
+                setRawInput((prev) => `${prev.trimEnd()}${snippet}`)
+              }
+            />
+            {noteType === "khutbah" || noteType === "lecture" ? (
+              <p className="text-xs text-stone-500 text-center leading-relaxed">
+                After you save, recording + timestamps sit beside your note — no need to hurry in
+                the masjid aisle.
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="space-y-2">

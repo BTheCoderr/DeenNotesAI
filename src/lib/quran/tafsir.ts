@@ -1,7 +1,7 @@
 import "server-only";
 
 import { logQuranSdkError, withQuranSdk } from "./client";
-import { isMockQuranMode } from "./config";
+import { usesOfflineQuranDataset } from "./config";
 import {
   mockTafsirResources,
   mockTranslationResources,
@@ -12,7 +12,7 @@ import type { TafsirResourceDto, TranslationResourceDto } from "./types";
 export async function fetchTranslationResources(): Promise<
   TranslationResourceDto[]
 > {
-  if (isMockQuranMode()) return mockTranslationResources();
+  if (usesOfflineQuranDataset()) return mockTranslationResources();
   try {
     const list = await withQuranSdk((c) =>
       c.content.v4.resources.translations.list({}),
@@ -32,7 +32,7 @@ export async function fetchTranslationResources(): Promise<
 
 /** Tafsir resource catalogue (Content API). */
 export async function fetchTafsirResources(): Promise<TafsirResourceDto[]> {
-  if (isMockQuranMode()) return mockTafsirResources();
+  if (usesOfflineQuranDataset()) return mockTafsirResources();
   try {
     const list = await withQuranSdk((c) =>
       c.content.v4.resources.tafsirs.list({}),

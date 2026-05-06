@@ -1,12 +1,10 @@
-import { NextResponse } from "next/server";
-
-import { guardQuranOrExecute } from "@/app/api/quran/_shared";
+import { guardQuranOrExecute, safeQuranApiSuccess } from "@/app/api/quran/_shared";
 import { fetchTranslationResources } from "@/lib/quran/tafsir";
 
 export async function GET() {
   return guardQuranOrExecute(async () => {
     const translations = await fetchTranslationResources();
-    return NextResponse.json(
+    return safeQuranApiSuccess(
       { translations },
       {
         headers: {

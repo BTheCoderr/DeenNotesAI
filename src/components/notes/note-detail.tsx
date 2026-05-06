@@ -9,9 +9,18 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { KhutbahRecordingPanel } from "@/components/notes/KhutbahRecordingPanel";
+import { NoteAyahEmbedCard } from "@/components/notes/NoteAyahEmbedCard";
 import { CopyButton } from "@/components/CopyButton";
+import {
+  mergeNoteEnrichment,
+  readNoteEnrichment,
+  attachmentsWithinBudget,
+  type NoteAttachmentLocal,
+} from "@/lib/browser/note-local-enrichment";
 import { rememberContinueNoteId } from "@/lib/browser/continue-note";
 import { rememberRecentNoteOpen } from "@/lib/browser/note-recent";
+import { readPreferredQuranEncTranslationKey } from "@/lib/browser/quranenc-preference";
 import { GlassPanel } from "@/components/ds/GlassPanel";
 import { PremiumCard } from "@/components/ds/PremiumCard";
 import { ShareCard } from "@/components/notes/ShareCard";
@@ -65,7 +74,7 @@ function ListSection({
       <h3 className="font-display text-[0.92rem] font-semibold tracking-wide uppercase text-accent/95">
         {title}
       </h3>
-      <ul className="mt-3 space-y-2.5 text-[0.95rem] text-ink/90 leading-relaxed">
+      <ul className="mt-4 space-y-3 text-[1.02rem] sm:text-[1.06rem] text-ink/90 leading-relaxed">
         {items.map((item, i) => (
           <li key={`${title}-${i}`} className="flex gap-3">
             <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent shadow-sm shadow-accent/35" aria-hidden />
@@ -93,6 +102,18 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
   const ayahDrawerTarget = ayahDrawer ?? ayahDrawerTargetRef.current;
   const ayahSheetEverOpened = ayahDrawerTargetRef.current !== null;
   const [discExpanded, setDiscExpanded] = useState(false);
+  const [enrichment, setEnrichment] = useState(() =>
+    readNoteEnrichment(note.id),
+  );
+  const [qeListenKey, setQeListenKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEnrichment(readNoteEnrichment(note.id));
+  }, [note.id]);
+
+  useEffect(() => {
+    setQeListenKey(readPreferredQuranEncTranslationKey() ?? null);
+  }, []);
 
   const shortSummary =
     (typeof note.short_summary === "string" && note.short_summary.trim()) ||
@@ -205,16 +226,24 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
           </span>
           <motion.h1
             layout="position"
-            className="font-display text-[1.8rem] sm:text-[2.15rem] font-semibold text-ink mt-4 leading-[1.15] tracking-tight"
+            className="font-display text-[2.05rem] sm:text-[2.45rem] font-semibold text-ink mt-4 leading-[1.12] tracking-tight"
           >
             {note.title}
           </motion.h1>
-          <p className="text-[0.7rem] uppercase tracking-[0.12em] text-muted mt-3">
-            {new Date(note.created_at).toLocaleString(undefined, {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-[0.7rem] uppercase tracking-[0.14em] text-muted">
+            <time
+              dateTime={note.created_at}
+              className="rounded-full border border-black/[0.07] bg-background/90 px-3 py-1.5 font-semibold tabular-nums"
+            >
+              {new Date(note.created_at).toLocaleString(undefined, {
+                dateStyle: "long",
+                timeStyle: "short",
+              })}
+            </time>
+            <span className="rounded-full border border-accent/15 bg-accent/6 px-3 py-1.5 text-accent font-bold">
+              Gentle archive
+            </span>
+          </div>
 
           {mergedQuranRefs.length ? (
             <QuranReferencePills
@@ -227,6 +256,181 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
           ) : null}
         </motion.header>
 
+        <div className="mt-8 space-y-5">
+          {mergedQuranRefs.slice(0, 4).map((r) => (
+            <NoteAyahEmbedCard
+              key={`${r.chapter}:${r.verse}`}
+              surah={r.chapter}
+              ayah={r.verse}
+              onOpen={() => setAyahDrawer({ s: r.chapter, a: r.verse })}
+            />
+          ))}
+        </div>
+
+        {(note.note_type === "khutbah" || note.note_type === "lecture") ? (
+          <div className="mt-8">
+            <KhutbahRecordingPanel noteId={note.id} />
+          </div>
+        ) : null}
+
+        <section className="mt-8 rounded-[1.35rem] border border-black/[0.06] bg-surface/92 p-5 sm:p-6 space-y-4 shadow-elev-1">
+          <header>
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-accent">
+              Living margin (this device)
+            </p>
+            <h2 className="font-display text-lg font-semibold text-ink mt-1">
+              Pinned takeaway &amp; reflections
+            </h2>
+          </header>
+          <label className="block text-xs font-semibold text-muted">
+            Pinned line
+            <textarea
+              rows={2}
+              value={enrichment.pinnedTakeaway ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setEnrichment((prev) => {
+                  const next = { ...prev, pinnedTakeaway: v };
+                  mergeNoteEnrichment(note.id, next);
+                  return next;
+                });
+              }}
+              placeholder="One line you want to see first when you reopen this note…"
+              className="mt-1.5 w-full rounded-2xl border border-black/[0.08] bg-background px-4 py-3 text-sm leading-relaxed text-ink"
+            />
+          </label>
+          <label className="block text-xs font-semibold text-muted">
+            Continue reflecting
+            <textarea
+              rows={4}
+              value={enrichment.continueReflecting ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setEnrichment((prev) => {
+                  const next = { ...prev, continueReflecting: v };
+                  mergeNoteEnrichment(note.id, next);
+                  return next;
+                });
+              }}
+              placeholder="Bleed journaling here — softness over polish."
+              className="mt-1.5 w-full rounded-2xl border border-black/[0.08] bg-background px-4 py-3 text-[0.98rem] leading-[1.7] text-ink"
+            />
+          </label>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-muted block">
+              Image / scan attachments (stored locally only)
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (!files?.length) return;
+                  Array.from(files).forEach((file) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const dataUrl =
+                        typeof reader.result === "string" ? reader.result : "";
+                      const kind: NoteAttachmentLocal["kind"] =
+                        file.type.includes("pdf") ? "pdf_snippet" : "image";
+                      setEnrichment((prev) => {
+                        let list = [...(prev.attachments ?? [])];
+                        list = attachmentsWithinBudget([
+                          ...list,
+                          {
+                            kind,
+                            label: file.name.slice(0, 80),
+                            dataUrl: kind === "image" ? dataUrl : undefined,
+                            hint:
+                              kind === "pdf_snippet"
+                                ? "PDF reference · preview roadmap"
+                                : undefined,
+                            at: new Date().toISOString(),
+                          },
+                        ]);
+                        const next = { ...prev, attachments: list };
+                        mergeNoteEnrichment(note.id, next);
+                        return next;
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  });
+                  e.target.value = "";
+                }}
+                className="mt-2 block w-full text-xs text-muted"
+              />
+            </label>
+          </div>
+          {enrichment.attachments?.length ? (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {enrichment.attachments.map((a, idx) => (
+                <li
+                  key={`${a.label}-${idx}`}
+                  className="rounded-2xl border border-black/[0.06] overflow-hidden bg-mint/20"
+                >
+                  {a.dataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- local data URLs from user uploads
+                    <img
+                      src={a.dataUrl}
+                      alt={a.label}
+                      className="w-full h-36 object-cover"
+                    />
+                  ) : (
+                    <div className="p-4 text-sm font-medium">{a.label}</div>
+                  )}
+                  <div className="px-3 py-2 flex justify-between text-[0.65rem] uppercase tracking-wide font-bold text-muted">
+                    <span>{a.kind.replace("_", " ")}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnrichment((prev) => {
+                          const rest = prev.attachments?.filter((_, i) => i !== idx);
+                          const next = { ...prev, attachments: rest };
+                          mergeNoteEnrichment(note.id, next);
+                          return next;
+                        });
+                      }}
+                      className="text-accent"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+
+        <section className="mt-8 rounded-[1.35rem] border border-accent/15 bg-accent-soft/20 px-5 py-5 sm:px-6">
+          <p className="text-[0.62rem] font-bold uppercase tracking-[0.18em] text-accent">
+            Listening · Mushaf continuity
+          </p>
+          <p className="mt-2 text-sm text-muted leading-relaxed">
+            Re-enter recitation calmly, or reopen translation narration if you already chose a QuranEnc voice.
+          </p>
+          <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
+            <Link
+              href="/app/quran"
+              className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover"
+            >
+              Ambient Mushaf pacing
+            </Link>
+            {qeListenKey ? (
+              <span className="inline-flex rounded-full border border-black/12 bg-background px-4 py-2 text-xs font-semibold text-muted">
+                Translation listens follow{" "}
+                <span className="ml-1 font-mono text-ink">{qeListenKey}</span>
+              </span>
+            ) : (
+              <Link
+                href="/app/quran/1"
+                className="inline-flex rounded-full border border-accent/25 px-4 py-2 text-xs font-bold text-accent"
+              >
+                Open reader · choose QuranEnc listens
+              </Link>
+            )}
+          </div>
+        </section>
+
         {note.main_reminder ? (
           <motion.section
             initial={false}
@@ -237,7 +441,7 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
               <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-accent">
                 Main reminder
               </p>
-              <p className="mt-3 text-[1.15rem] sm:text-xl font-display font-medium text-ink leading-snug tracking-tight">
+              <p className="mt-3 text-[1.35rem] sm:text-[1.52rem] font-display font-medium text-ink leading-snug tracking-tight">
                 {note.main_reminder}
               </p>
             </div>
@@ -295,10 +499,10 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
               >
                 {tab === "summary" ? (
                   <div>
-                    <h2 className="font-display text-xl sm:text-[1.35rem] font-semibold text-ink tracking-tight">
+                    <h2 className="font-display text-2xl sm:text-[1.55rem] font-semibold text-ink tracking-tight">
                       Narrative arc
                     </h2>
-                    <p className="mt-4 text-[1.01rem] sm:text-[1.045rem] text-ink/[0.92] leading-[1.75] whitespace-pre-wrap">
+                    <p className="mt-5 text-[1.08rem] sm:text-[1.12rem] text-ink/[0.93] leading-[1.82] whitespace-pre-wrap">
                       {shortSummary || "—"}
                     </p>
                     <ListSection title="Key reminders" items={note.key_reminders} />
@@ -307,11 +511,11 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
 
                 {tab === "actions" ? (
                   <div>
-                    <h2 className="font-display text-xl font-semibold text-ink">
+                    <h2 className="font-display text-2xl font-semibold text-ink">
                       Grounded movement
                     </h2>
                     {note.action_steps.length ? (
-                      <ul className="mt-5 space-y-3 text-[0.95rem] leading-relaxed text-ink/90">
+                      <ul className="mt-5 space-y-3 text-[1.05rem] leading-relaxed text-ink/90">
                         {note.action_steps.map((s, i) => (
                           <li key={i} className="flex gap-3">
                             <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/12 text-accent text-xs font-bold">
@@ -329,11 +533,11 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
 
                 {tab === "dua" ? (
                   <div>
-                    <h2 className="font-display text-xl font-semibold text-ink">
+                    <h2 className="font-display text-2xl font-semibold text-ink">
                       Dua whispers
                     </h2>
                     {note.dua_prompts.length ? (
-                      <ul className="mt-5 space-y-3 text-[0.95rem] leading-relaxed text-ink/90">
+                      <ul className="mt-5 space-y-3 text-[1.05rem] leading-relaxed text-ink/90">
                         {note.dua_prompts.map((s, i) => (
                           <li key={i} className="flex gap-3">
                             <span className="text-accent font-bold shrink-0">·</span>
@@ -349,11 +553,11 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
 
                 {tab === "reflection" ? (
                   <div>
-                    <h2 className="font-display text-xl font-semibold text-ink">
+                    <h2 className="font-display text-2xl font-semibold text-ink">
                       Heart questions
                     </h2>
                     {note.reflection_questions.length ? (
-                      <ul className="mt-5 space-y-4 text-[0.95rem] leading-relaxed text-ink/90">
+                      <ul className="mt-5 space-y-4 text-[1.05rem] leading-relaxed text-ink/90">
                         {note.reflection_questions.map((s, i) => (
                           <li key={i} className="flex gap-3">
                             <span className="text-accent font-bold shrink-0">{i + 1}.</span>
@@ -369,7 +573,7 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
 
                 {tab === "share" ? (
                   <div>
-                    <h2 className="font-display text-xl font-semibold text-ink">
+                    <h2 className="font-display text-2xl font-semibold text-ink">
                       Shareable calm
                     </h2>
                     {trimmedShare ? (
@@ -440,9 +644,9 @@ export function NoteDetailScreen({ note }: { note: NoteDetailPayload }) {
             </span>
           </summary>
           <div className="border-t border-black/[0.04] px-5 pb-5 pt-4">
-            <p className="text-sm text-muted whitespace-pre-wrap leading-relaxed">
+            <blockquote className="text-[1.02rem] sm:text-[1.05rem] text-ink/[0.88] whitespace-pre-wrap leading-[1.75] border-l-[3px] border-accent/30 pl-4 italic font-display">
               {note.raw_input}
-            </p>
+            </blockquote>
           </div>
         </details>
       </article>

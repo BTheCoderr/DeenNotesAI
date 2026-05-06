@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { SurahListSkeletonRows } from "@/features/quran/components/QuranSkeletons";
+import { QuranServiceEmptyState } from "@/features/quran/components/QuranServiceEmptyState";
 import { useQuranChapters } from "@/features/quran/hooks/useQuranData";
 import type { ChapterDto } from "@/lib/quran/types";
+import { offlineReflectionSubtitle } from "@/lib/quran/api-contract";
 import { QURAN_REFLECTION_FOOTER } from "@/lib/quran/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +32,15 @@ function RevelationChip({ revelationPlace }: { revelationPlace: string }) {
 }
 
 export function SurahListScreen() {
-  const { chapters, error, loading } = useQuranChapters();
+  const {
+    chapters,
+    serviceMeta,
+    error,
+    errorCode,
+    retryable,
+    loading,
+    reload,
+  } = useQuranChapters();
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -46,6 +56,11 @@ export function SurahListScreen() {
         (c.translatedName?.toLowerCase().includes(s) ?? false),
     );
   }, [chapters, q]);
+
+  const offlineHelp = useMemo(
+    () => offlineReflectionSubtitle(serviceMeta ?? null),
+    [serviceMeta],
+  );
 
   return (
     <div className="space-y-6 pb-28">
@@ -82,12 +97,22 @@ export function SurahListScreen() {
         </div>
       </header>
 
+      {offlineHelp ? (
+        <p className="rounded-2xl border border-accent/20 bg-accent-soft/30 px-4 py-3 text-xs text-ink leading-relaxed">
+          {offlineHelp}
+        </p>
+      ) : null}
+
       {loading ? (
         <SurahListSkeletonRows count={8} />
       ) : error ? (
-        <p className="rounded-[1.25rem] border border-amber-200/90 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
-          {error}
-        </p>
+        <QuranServiceEmptyState
+          description={error}
+          serviceMeta={serviceMeta}
+          errorCode={errorCode}
+          retryable={retryable}
+          onReconnect={retryable ? () => void reload() : undefined}
+        />
       ) : (
         <ul className="space-y-3.5 motion-safe:[&>*]:motion-safe-[animation-delay:calc(var(--i)*40ms)]">
           {filtered.map((c: ChapterDto, i: number) => (

@@ -3,7 +3,7 @@ import "server-only";
 import type { Chapter as SdkChapter, ChapterId } from "@quranjs/api";
 
 import { logQuranSdkError, withQuranSdk } from "./client";
-import { isMockQuranMode } from "./config";
+import { usesOfflineQuranDataset } from "./config";
 import {
   mockChapterById,
   mockChaptersSorted,
@@ -24,7 +24,7 @@ function chapterToDto(c: SdkChapter): ChapterDto {
 }
 
 export async function fetchChaptersSorted(): Promise<ChapterDto[]> {
-  if (isMockQuranMode()) return mockChaptersSorted();
+  if (usesOfflineQuranDataset()) return mockChaptersSorted();
   try {
     const list = await withQuranSdk((c) => c.content.v4.chapters.list({}));
     return [...list].sort((a, b) => a.id - b.id).map(chapterToDto);
@@ -37,7 +37,7 @@ export async function fetchChaptersSorted(): Promise<ChapterDto[]> {
 export async function fetchChapterById(
   chapterId: number,
 ): Promise<ChapterDto | null> {
-  if (isMockQuranMode()) return mockChapterById(chapterId);
+  if (usesOfflineQuranDataset()) return mockChapterById(chapterId);
 
   try {
     if (chapterId < 1 || chapterId > 114) return null;

@@ -11,15 +11,17 @@ import { createServerClient } from "@quranjs/api/server";
 import type { ServerClientConfig } from "@quranjs/api";
 
 import {
-  isMockQuranMode,
   parseDefaultTranslationIds,
+  resolveQuranClientId,
+  resolveQuranClientSecret,
   resolveQuranSdkServiceUrls,
+  usesOfflineQuranDataset,
 } from "./config";
 
 export class QuranApiMisconfiguredError extends Error {
   constructor() {
     super(
-      "Quran API credentials missing. Set QURAN_CLIENT_ID and QURAN_CLIENT_SECRET (server-only), or enable MOCK_QURAN_API=true for scaffolding.",
+      "Quran API credentials missing. Set QURAN_CLIENT_ID / QURAN_CLIENT_SECRET or ClientID / Client_Secret (server-only), or enable MOCK_QURAN_API=true for scaffolding.",
     );
     this.name = "QuranApiMisconfiguredError";
   }
@@ -28,8 +30,8 @@ export class QuranApiMisconfiguredError extends Error {
 let cachedSdk: ReturnType<typeof createServerClient> | null = null;
 
 function buildServerSdkConfig(): ServerClientConfig {
-  const clientId = process.env.QURAN_CLIENT_ID?.trim();
-  const clientSecret = process.env.QURAN_CLIENT_SECRET?.trim();
+  const clientId = resolveQuranClientId();
+  const clientSecret = resolveQuranClientSecret();
   if (!clientId || !clientSecret) {
     throw new QuranApiMisconfiguredError();
   }
@@ -66,9 +68,9 @@ function buildServerSdkConfig(): ServerClientConfig {
  * Domain services must branch on mock **before** calling this.
  */
 export function getQuranServerClient(): ReturnType<typeof createServerClient> {
-  if (isMockQuranMode()) {
+  if (usesOfflineQuranDataset()) {
     throw new Error(
-      "getQuranServerClient() must not run when MOCK_QURAN_API=true; use mock layer.",
+      "getQuranServerClient() must not run while serving offline reflection dataset; use mock layer.",
     );
   }
 
@@ -86,12 +88,9 @@ export function resetQuranServerClient(): void {
 
 /** Live credentials present and mock mode disabled. */
 export function isLiveQuranSdkConfigured(): boolean {
-  if (isMockQuranMode()) return false;
+  if (usesOfflineQuranDataset()) return false;
   try {
-    return Boolean(
-      process.env.QURAN_CLIENT_ID?.trim() &&
-        process.env.QURAN_CLIENT_SECRET?.trim(),
-    );
+    return Boolean(resolveQuranClientId() && resolveQuranClientSecret());
   } catch {
     return false;
   }
@@ -110,8 +109,8 @@ function isLikelyUnauthorized(err: unknown): boolean {
 export async function withQuranSdk<T>(
   fn: (client: ReturnType<typeof createServerClient>) => Promise<T>,
 ): Promise<T> {
-  if (isMockQuranMode()) {
-    throw new Error("withQuranSdk called in MOCK_QURAN_API mode");
+  if (usesOfflineQuranDataset()) {
+    throw new Error("withQuranSdk called while offline reflection dataset is active");
   }
 
   const client = getQuranServerClient();
@@ -125,10 +124,19 @@ export async function withQuranSdk<T>(
 }
 
 export function logQuranSdkError(where: string, err: unknown) {
-  if (process.env.NODE_ENV !== "development") return;
   const msg =
     err && typeof err === "object" && "message" in err
       ? String((err as Error).message)
       : String(err);
-  console.warn(`[quran-sdk] ${where}`, msg.slice(0, 200));
+  if (process.env.NODE_ENV === "development") {
+    console.warn(`[quran-sdk] ${where}`, msg.slice(0, 200));
+    return;
+  }
+  console.warn(
+    JSON.stringify({
+      tag: "deennotes.quran.sdk",
+      where,
+      message: msg.slice(0, 320),
+    }),
+  );
 }

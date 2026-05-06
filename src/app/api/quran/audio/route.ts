@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
-
-import { guardQuranOrExecute } from "@/app/api/quran/_shared";
+import {
+  guardQuranOrExecute,
+  quranInvalidRequest,
+  quranNotFoundResponse,
+  safeQuranApiSuccess,
+} from "@/app/api/quran/_shared";
 import {
   fetchVerseAudioPayload,
   defaultVerseReciterId,
@@ -17,19 +20,16 @@ export async function GET(request: Request) {
     searchParams.get("reciter")?.trim() || defaultVerseReciterId();
 
   if (!parseVerseKey(surah, ayah)) {
-    return NextResponse.json({ error: "Invalid surah or ayah." }, { status: 400 });
+    return quranInvalidRequest("Invalid surah or ayah.");
   }
 
   return guardQuranOrExecute(async () => {
     const payload = await fetchVerseAudioPayload(surah, ayah, reciterId);
     if (!payload) {
-      return NextResponse.json(
-        { error: "No audio URL for this recitation." },
-        { status: 404 },
-      );
+      return quranNotFoundResponse("No audio URL for this recitation.");
     }
 
-    return NextResponse.json({
+    return safeQuranApiSuccess({
       verseKey: payload.verseKey,
       reciterId: payload.reciterId,
       audioUrl: payload.audioUrl,

@@ -4,7 +4,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { WeeklyDateStrip } from "@/components/app/WeeklyDateStrip";
 import { useNewNoteMenu } from "@/components/app/NewNoteMenuContext";
 import { BetaFeedbackCta } from "@/components/dashboard/BetaFeedbackCta";
 import {
@@ -176,14 +175,9 @@ export function DashboardHome({ latest, recent }: Props) {
             {greetingLine()}
           </h1>
           <p className="text-[0.95rem] text-muted leading-relaxed max-w-prose">
-            {vibeLine()} Reflection is heart-work — organise it beside trustworthy teachers,
-            never as a verdict from us.
+            {vibeLine()}
           </p>
         </motion.header>
-
-        <motion.div variants={fadeUpVariants(!!reduceMotion)}>
-          <WeeklyDateStrip />
-        </motion.div>
 
         {showResume ? (
           <motion.div variants={fadeUpVariants(!!reduceMotion)}>
@@ -387,7 +381,7 @@ export function DashboardHome({ latest, recent }: Props) {
         <motion.div variants={fadeUpVariants(!!reduceMotion)} className="space-y-4">
           <GradientHero glow>
             <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-accent">
-              Hero reflection
+              Continue your thread
             </p>
             <p className="font-display text-xl sm:text-[1.35rem] leading-snug text-ink font-semibold max-w-xl mt-2">
               {latest
@@ -442,41 +436,6 @@ export function DashboardHome({ latest, recent }: Props) {
                   capture while it hums quietly.
                 </p>
               </button>
-            </PremiumCard>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <PremiumCard elevated="md" interactive>
-              <button
-                type="button"
-                onClick={() => openNewNoteMenu()}
-                className={cn(
-                  "w-full text-left p-5 rounded-[inherit]",
-                  "bg-gradient-to-br from-mint/45 via-surface to-background",
-                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                )}
-              >
-                <SectionHeading
-                  eyebrow="Begin"
-                  title="New reflection note"
-                  description="Paste, dictate, or type — summaries & reminders without claiming fatwa."
-                  className="space-y-1.5 [&_h2]:text-base [&_h2]:sm:text-lg"
-                />
-              </button>
-            </PremiumCard>
-
-            <PremiumCard elevated="sm" interactive>
-              <Link
-                href="/app/quran"
-                className="block h-full rounded-[inherit] bg-gradient-to-br from-accent-soft/40 via-mint/30 to-surface p-5 text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <SectionHeading
-                  eyebrow="Quran reader"
-                  title="Immersive Mushaf pacing"
-                  description="Sticky controls, softened Arabic line boxes, anchored deep links."
-                  className="space-y-1.5 [&_h2]:text-base [&_h2]:sm:text-lg"
-                />
-              </Link>
             </PremiumCard>
           </div>
         </motion.div>
@@ -588,49 +547,12 @@ export function DashboardHome({ latest, recent }: Props) {
 
         <motion.section
           variants={fadeUpVariants(!!reduceMotion)}
-          className="rounded-[1.45rem] border border-black/[0.06] bg-surface p-6 shadow-elev-1 space-y-4"
-        >
-          <SectionHeading
-            eyebrow="Rhythm lab"
-            title="Streak placeholders & inward stats"
-          />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-dashed border-accent/25 bg-mint/25 px-4 py-5">
-              <p className="text-[2rem] leading-none font-display font-semibold text-accent tabular-nums">
-                —
-              </p>
-              <p className="text-xs font-semibold text-ink mt-2">Weekly streak awaits</p>
-              <p className="text-[0.7rem] text-muted mt-2 leading-snug">
-                When you jot three nights in gentle succession, ribbons will blossom here — patience
-                over pressure.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-black/[0.05] bg-background/80 px-4 py-5">
-              <p className="text-xs font-bold uppercase tracking-wide text-muted">
-                Insight whisper
-              </p>
-              <p className="text-sm text-ink/90 mt-2 leading-relaxed">
-                Re-reading one ayah aloud changes the tempo of your week more than hoarding fifty
-                screenshots.
-              </p>
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          variants={fadeUpVariants(!!reduceMotion)}
           className="rounded-[1.45rem] border border-black/[0.07] bg-gradient-to-br from-surface via-background to-accent-soft/20 p-6 space-y-2 shadow-inner"
         >
-          <SectionHeading
-            eyebrow="Calm commerce of ideas"
-            title="Inspired by tools you cherish"
-            description="Headspace softness · Quran.com fidelity · Notion scaffolding — humbled for adab."
-          />
-          <ul className="text-sm text-muted space-y-2 pt-3 leading-relaxed list-disc marker:text-accent pl-5">
-            <li>Note after communal prayer; let the week&apos;s strip jog memory.</li>
-            <li>Choose one dua you will embody, not just admire.</li>
-            <li>Pair every glowing AI line with embodied scholarship.</li>
-          </ul>
+          <p className="text-sm text-muted leading-relaxed">
+            Headspace softness · Quran.com fidelity · journaling calm — this home is built for
+            reflection, not dashboards.
+          </p>
         </motion.section>
 
         <motion.div variants={fadeUpVariants(!!reduceMotion)}>

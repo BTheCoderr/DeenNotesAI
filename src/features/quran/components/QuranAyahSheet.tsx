@@ -4,6 +4,10 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  parseQuranErrorPayload,
+  splitQuranApiJson,
+} from "@/lib/quran/api-contract";
 import type { VerseDto } from "@/lib/quran/types";
 import { readPreferredTranslationIds } from "@/lib/quran/translation-preference";
 import { dsTransition } from "@/lib/ds-motion";
@@ -47,15 +51,25 @@ export function QuranAyahSheet({
         `/api/quran/verses/${surah}/${ayah}${translationPart}`,
         { cache: "no-store" },
       );
-      const body = await res.json();
+      let raw: unknown;
+      try {
+        raw = await res.json();
+      } catch {
+        raw = null;
+      }
       if (!res.ok) {
-        setError(
-          typeof body?.error === "string" ? body.error : "Could not load ayah.",
-        );
+        const pe = parseQuranErrorPayload(raw);
+        setError(pe.message);
         setVerse(null);
         return;
       }
-      setVerse(body.verse as VerseDto);
+      const { data } = splitQuranApiJson<{ verse?: VerseDto | null }>(raw);
+      if (!data.verse) {
+        setError("This ayah could not be hydrated.");
+        setVerse(null);
+        return;
+      }
+      setVerse(data.verse);
     } catch {
       setError("Network error.");
       setVerse(null);

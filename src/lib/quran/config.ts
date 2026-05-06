@@ -1,5 +1,17 @@
 import "server-only";
 
+import {
+  canServeQuranApiRoutes,
+  getQuranServingMode,
+  isGracefulMockFallbackEffective,
+  isLiveQuranCredentialsConfigured,
+  isMockQuranMode,
+  resolveQuranClientId,
+  resolveQuranClientSecret,
+  usesOfflineQuranDataset,
+  validateQuranEnvironment,
+} from "./env";
+
 /**
  * Quran Foundation / Quran.com Content API runtime configuration (server-only).
  * Auth URLs are environment-driven: production relies on SDK defaults unless overridden;
@@ -8,23 +20,21 @@ import "server-only";
 
 export type QfEnvKind = "production" | "prelive" | "staging";
 
-/** Truthy strings enable mock content (UI build before credentials exist). */
-export function isMockQuranMode(): boolean {
-  const m = process.env.MOCK_QURAN_API?.trim().toLowerCase();
-  return m === "true" || m === "1" || m === "yes";
-}
+export {
+  canServeQuranApiRoutes,
+  getQuranServingMode,
+  isGracefulMockFallbackEffective,
+  isLiveQuranCredentialsConfigured,
+  isMockQuranMode,
+  resolveQuranClientId,
+  resolveQuranClientSecret,
+  usesOfflineQuranDataset,
+  validateQuranEnvironment,
+};
 
-/** Live OAuth client credentials configured (excluding mock). */
-export function isLiveQuranCredentialsConfigured(): boolean {
-  return Boolean(
-    process.env.QURAN_CLIENT_ID?.trim() &&
-      process.env.QURAN_CLIENT_SECRET?.trim(),
-  );
-}
-
-/** API routes should serve Quran JSON when mock mode OR credentials are set. */
+/** @deprecated Prefer {@link canServeQuranApiRoutes} — retained for incremental refactors */
 export function isQuranBackendReachable(): boolean {
-  return isMockQuranMode() || isLiveQuranCredentialsConfigured();
+  return canServeQuranApiRoutes();
 }
 
 /** Normalizes `QF_ENV`: production | prelive | staging (aliases). */

@@ -11,6 +11,9 @@ export type QuranAudioTarget = {
   ayah: number;
   verse: VerseDto;
   chapterLabel?: string;
+  /** `recitation` hits Quran Foundation; `quranenc_translation` uses `/api/quranenc/audio`. */
+  audioSource?: "recitation" | "quranenc_translation";
+  quranEncTranslationKey?: string | null;
 };
 
 type Props = {
@@ -18,6 +21,10 @@ type Props = {
   audioUrl: string | null;
   loading: boolean;
   error: string | null;
+  /** Shown under the title (e.g. “Translation narration · QuranEnc”). */
+  audioSourceLabel?: string | null;
+  /** Required attribution when playing QuranEnc-sourced assets. */
+  attributionLine?: string | null;
   onDismiss: () => void;
 };
 
@@ -29,6 +36,8 @@ export function QuranStickyPlayer({
   audioUrl,
   loading,
   error,
+  audioSourceLabel,
+  attributionLine,
   onDismiss,
 }: Props) {
   const rm = useReducedMotion();
@@ -125,7 +134,7 @@ export function QuranStickyPlayer({
           </p>
           <p className="truncate text-[0.65rem] text-muted">
             {audioUrl
-              ? "Streaming recitation preview"
+              ? (audioSourceLabel ?? "Streaming recitation")
               : error ?? "Fetching audio URL…"}
           </p>
         </div>
@@ -147,9 +156,15 @@ export function QuranStickyPlayer({
           aria-hidden
         />
       </div>
-      <p className="text-[0.58rem] text-muted text-center uppercase tracking-wide">
-        Player shell — waveform & seek bar can wire to real duration in Expo
-      </p>
+      {attributionLine ? (
+        <p className="text-[0.58rem] text-muted text-center leading-snug px-1">
+          {attributionLine}
+        </p>
+      ) : (
+        <p className="text-[0.58rem] text-muted text-center uppercase tracking-wide">
+          Player shell — waveform & seek bar can wire to real duration in Expo
+        </p>
+      )}
     </motion.div>
   );
 }

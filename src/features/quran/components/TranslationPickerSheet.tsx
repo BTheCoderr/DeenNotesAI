@@ -1,7 +1,13 @@
 "use client";
 
 import { BottomSheet } from "@/components/ds/BottomSheet";
+import { TranslationSelector } from "@/components/quran/TranslationSelector";
 import type { TranslationCatalogItem } from "@/features/quran/hooks/useQuranData";
+import type { QuranEncLanguageGroupDto } from "@/lib/quranenc/types";
+import {
+  readPreferredQuranEncTranslationKey,
+  writePreferredQuranEncTranslationKey,
+} from "@/lib/browser/quranenc-preference";
 import {
   readPreferredTranslationIds,
   writePreferredTranslationIds,
@@ -14,6 +20,10 @@ type Props = {
   translations: TranslationCatalogItem[];
   selectedTranslation: string;
   onSelect: (value: string) => void;
+  quranEncLanguageGroups: QuranEncLanguageGroupDto[];
+  selectedQuranEncKey: string | null;
+  onSelectQuranEncKey: (value: string | null) => void;
+  quranEncCatalogError?: string | null;
 };
 
 export function TranslationPickerSheet({
@@ -22,8 +32,13 @@ export function TranslationPickerSheet({
   translations,
   selectedTranslation,
   onSelect,
+  quranEncLanguageGroups,
+  selectedQuranEncKey,
+  onSelectQuranEncKey,
+  quranEncCatalogError,
 }: Props) {
   const stored = readPreferredTranslationIds();
+  const storedQe = readPreferredQuranEncTranslationKey();
 
   return (
     <BottomSheet open={open} onClose={onClose} zClass="z-[55]">
@@ -36,10 +51,11 @@ export function TranslationPickerSheet({
             id="translation-sheet-title"
             className="font-display text-lg font-semibold text-ink"
           >
-            Translation
+            Translations
           </h2>
           <p className="text-[0.7rem] text-muted mt-0.5">
-            Choose a resource for understanding—Arabic text is unchanged.
+            Arabic Mushaf typography stays authored by Quran Foundation — parallel lines are layered
+            for understanding only.
           </p>
         </div>
         <button
@@ -51,6 +67,11 @@ export function TranslationPickerSheet({
         </button>
       </div>
       <ul className="flex-1 overflow-y-auto overscroll-contain px-3 py-2 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-1">
+        <li className="pb-1">
+          <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] text-accent px-4">
+            Quran Foundation
+          </p>
+        </li>
         <li>
           <button
             type="button"
@@ -65,10 +86,10 @@ export function TranslationPickerSheet({
                 : "text-ink hover:bg-mint/30",
             )}
           >
-            Server default
+            Content API default
             {stored ? (
               <span className="block text-[0.65rem] font-normal text-muted mt-0.5">
-                Saved preference: {stored}
+                Saved resource ids: {stored}
               </span>
             ) : null}
           </button>
@@ -99,6 +120,61 @@ export function TranslationPickerSheet({
               </button>
             </li>
           ))}
+        <li className="pt-5 pb-1">
+          <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] text-accent px-4">
+            QuranEnc (multilingual)
+          </p>
+          <p className="text-[0.65rem] text-muted px-4 mt-1 leading-relaxed">
+            Verbatim text & narrations per QuranEnc terms — never rewritten in-app.
+          </p>
+        </li>
+        {quranEncCatalogError ? (
+          <li className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-xs text-amber-950 mx-2">
+            {quranEncCatalogError}
+          </li>
+        ) : null}
+        <li>
+          <button
+            type="button"
+            onClick={() => {
+              writePreferredQuranEncTranslationKey(null);
+              onSelectQuranEncKey(null);
+              onClose();
+            }}
+            className={cn(
+              "w-full text-left rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
+              selectedQuranEncKey === null
+                ? "bg-mint/50 text-accent ring-1 ring-accent/20"
+                : "text-ink hover:bg-mint/30",
+            )}
+          >
+            QuranEnc off
+            {storedQe ? (
+              <span className="block text-[0.65rem] font-normal text-muted mt-0.5">
+                Last saved QuranEnc row: {storedQe}
+              </span>
+            ) : (
+              <span className="block text-[0.65rem] font-normal text-muted mt-0.5">
+                Use Quran Foundation wording only underneath Arabic.
+              </span>
+            )}
+          </button>
+        </li>
+        <li className="px-2 py-2">
+          <TranslationSelector
+            hideGlobalClear
+            languageGroups={quranEncLanguageGroups}
+            selectedKey={selectedQuranEncKey}
+            onSelectKey={(key) => {
+              onSelectQuranEncKey(key);
+              onClose();
+            }}
+            onClearSelection={() => {
+              onSelectQuranEncKey(null);
+              onClose();
+            }}
+          />
+        </li>
       </ul>
     </BottomSheet>
   );

@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-
-import { guardQuranOrExecute, parseQueryIdList } from "@/app/api/quran/_shared";
+import {
+  guardQuranOrExecute,
+  parseQueryIdList,
+  quranInvalidRequest,
+  quranNotFoundResponse,
+  safeQuranApiSuccess,
+} from "@/app/api/quran/_shared";
 import {
   fetchVerseByKey,
   parseVerseKeyString,
@@ -14,12 +18,8 @@ export async function GET(request: Request, segment: { params: Params }) {
   const coords = parseVerseKeyString(decoded);
 
   if (!coords) {
-    return NextResponse.json(
-      {
-        error:
-          "Invalid verse key. Use surah:ayah (e.g. 2:255), 2-255, or encode as 2%3A255.",
-      },
-      { status: 400 },
+    return quranInvalidRequest(
+      "Invalid verse key. Use surah:ayah (e.g. 2:255), 2-255, or encode as 2%3A255.",
     );
   }
 
@@ -37,10 +37,10 @@ export async function GET(request: Request, segment: { params: Params }) {
   return guardQuranOrExecute(async () => {
     const verse = await fetchVerseByKey(coords.chapter, coords.ayah, opts);
     if (!verse) {
-      return NextResponse.json({ error: "Verse not found." }, { status: 404 });
+      return quranNotFoundResponse("Verse not found.");
     }
 
-    return NextResponse.json(
+    return safeQuranApiSuccess(
       { verse, key: `${coords.chapter}:${coords.ayah}` },
       {
         headers: {

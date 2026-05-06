@@ -3,7 +3,7 @@ import "server-only";
 import type { ApiParams, ChapterId, Verse, VerseKey } from "@quranjs/api";
 
 import { logQuranSdkError, withQuranSdk } from "./client";
-import { parseDefaultTafsirIds, isMockQuranMode } from "./config";
+import { parseDefaultTafsirIds, usesOfflineQuranDataset } from "./config";
 import { maxVerseForChapter } from "./chapter-verse-counts";
 import {
   mockVerse,
@@ -113,7 +113,7 @@ export async function fetchVersesForChapter(
   chapterId: number,
   opts?: QuranVerseFetchOptions,
 ): Promise<VerseDto[]> {
-  if (isMockQuranMode()) {
+  if (usesOfflineQuranDataset()) {
     return mockVersesForChapter(chapterId);
   }
 
@@ -141,7 +141,7 @@ export async function fetchVerseByKey(
   const key = parseVerseKey(chapter, ayah);
   if (!key) return null;
 
-  if (isMockQuranMode()) {
+  if (usesOfflineQuranDataset()) {
     return mockVerse(chapter, ayah);
   }
 

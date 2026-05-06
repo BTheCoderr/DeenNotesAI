@@ -5,16 +5,25 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AyahReadingCard } from "@/features/quran/components/AyahReadingCard";
 import { AyahBookmarkReflectSheet } from "@/features/quran/components/AyahBookmarkReflectSheet";
+import { LanguageAudioPlayer } from "@/components/quran/LanguageAudioPlayer";
 import { QuranAyahSheet } from "@/features/quran/components/QuranAyahSheet";
 import { AyahReaderSkeletonBlocks } from "@/features/quran/components/QuranSkeletons";
+import { QuranServiceEmptyState } from "@/features/quran/components/QuranServiceEmptyState";
 import type { QuranAudioTarget } from "@/features/quran/components/QuranStickyPlayer";
 import { QuranStickyPlayer } from "@/features/quran/components/QuranStickyPlayer";
 import { TranslationPickerSheet } from "@/features/quran/components/TranslationPickerSheet";
 import {
   useQuranChapterMeta,
+  useQuranEncGroupedTranslationCatalog,
+  useQuranEncSuraOverlay,
   useQuranVerses,
   useTranslationCatalog,
 } from "@/features/quran/hooks/useQuranData";
+import {
+  readOfflineReadingPrepIntent,
+  readPreferredQuranEncTranslationKey,
+  writeOfflineReadingPrepIntent,
+} from "@/lib/browser/quranenc-preference";
 import {
   appendAyahHistory,
   addOrUpdateBookmark,
@@ -28,7 +37,13 @@ import {
   toggleMarkerAyah,
 } from "@/lib/browser/quran-memory";
 import type { VerseDto } from "@/lib/quran/types";
+import { offlineReflectionSubtitle } from "@/lib/quran/api-contract";
 import { readPreferredTranslationIds } from "@/lib/quran/translation-preference";
+import {
+  QURANENC_ATTRIBUTION_LINE,
+  QURANENC_HOME_URL,
+  QURANENC_TERMS_URL,
+} from "@/lib/quranenc/types";
 import { cn } from "@/lib/utils";
 import {
   QURAN_REFLECTION_FOOTER,
@@ -43,8 +58,16 @@ type Props = {
 export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
   const { chapter } = useQuranChapterMeta(surahNumber);
   const translations = useTranslationCatalog();
+  const {
+    languages: quranEncLanguageGroups,
+    error: quranEncCatalogError,
+  } = useQuranEncGroupedTranslationCatalog();
   const [translationSheetOpen, setTranslationSheetOpen] = useState(false);
   const [selectedTranslation, setSelectedTranslation] = useState<string>("pref");
+  const [selectedQuranEncKey, setSelectedQuranEncKey] = useState<string | null>(
+    null,
+  );
+  const [offlinePrepIntent, setOfflinePrepIntent] = useState(false);
   const [tafsirAyah, setTafsirAyah] = useState<{ s: number; a: number } | null>(
     null,
   );
@@ -56,6 +79,20 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
 
   const tafsirTarget = tafsirAyah ?? tafsirTargetRef.current;
   const tafsirSheetEverOpened = tafsirTargetRef.current !== null;
+
+  useEffect(() => {
+    const stored = readPreferredQuranEncTranslationKey();
+    setSelectedQuranEncKey(stored ? stored : null);
+    setOfflinePrepIntent(readOfflineReadingPrepIntent());
+  }, []);
+
+  const {
+    byAyah: qeByAyah,
+    overlay: qeOverlay,
+    error: qeOverlayError,
+    loading: qeOverlayLoading,
+  } = useQuranEncSuraOverlay(surahNumber, selectedQuranEncKey);
+
   const [readingMode, setReadingMode] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [bookmarkGen, setBookmarkGen] = useState(0);
@@ -85,7 +122,19 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
     return "";
   }, [selectedTranslation]);
 
-  const { verses, error, loading } = useQuranVerses(surahNumber, queryPart);
+  const {
+    verses,
+    error,
+    loading,
+    reload: reloadVerses,
+    retryable: versesRetryable,
+    serviceMeta: versesServiceMeta,
+  } = useQuranVerses(surahNumber, queryPart);
+
+  const verseOfflineBanner = useMemo(
+    () => offlineReflectionSubtitle(versesServiceMeta ?? null),
+    [versesServiceMeta],
+  );
 
   const bookmarkKeys = useMemo(() => {
     void bookmarkGen;
@@ -160,16 +209,83 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [playerAttributionLine, setPlayerAttributionLine] = useState<string | null>(
+    null,
+  );
+  const [playerSourceLabel, setPlayerSourceLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!audioTarget) {
       setAudioUrl(null);
       setAudioError(null);
+      setPlayerAttributionLine(null);
+      setPlayerSourceLabel(null);
       return;
     }
+
+    const isQe =
+      audioTarget.audioSource === "quranenc_translation" &&
+      Boolean(audioTarget.quranEncTranslationKey?.trim());
+
+    if (isQe) {
+      let cancel = false;
+      setAudioLoading(true);
+      setAudioError(null);
+      setPlayerSourceLabel("Translation narration · QuranEnc");
+      setPlayerAttributionLine(QURANENC_ATTRIBUTION_LINE);
+      void (async () => {
+        try {
+          const key = String(audioTarget.quranEncTranslationKey).trim();
+          const res = await fetch(
+            `/api/quranenc/audio?${new URLSearchParams({
+              translation_key: key,
+              sura: String(audioTarget.surah),
+              aya: String(audioTarget.ayah),
+            })}`,
+            { cache: "force-cache" },
+          );
+          const j = (await res.json()) as {
+            audioUrl?: string;
+            error?: string;
+            available?: boolean;
+            attributionLine?: string;
+          };
+          if (cancel) return;
+          if (j.attributionLine) setPlayerAttributionLine(j.attributionLine);
+          if (!res.ok) {
+            setAudioError(j.error ?? "Could not resolve translation audio.");
+            setAudioUrl(null);
+            return;
+          }
+          const url = j.audioUrl?.trim() ?? "";
+          if (!j.available || !url) {
+            setAudioError(
+              "Translation audio is not available here (offline mock or CDN blocked). QuranEnc terms still apply when text is shown.",
+            );
+            setAudioUrl(null);
+            return;
+          }
+          setAudioUrl(url);
+          setAudioError(null);
+        } catch {
+          if (!cancel) {
+            setAudioError("Translation audio request failed.");
+            setAudioUrl(null);
+          }
+        } finally {
+          if (!cancel) setAudioLoading(false);
+        }
+      })();
+      return () => {
+        cancel = true;
+      };
+    }
+
     let cancel = false;
     setAudioLoading(true);
     setAudioError(null);
+    setPlayerAttributionLine(null);
+    setPlayerSourceLabel("Recitation preview · Quran Foundation");
     void (async () => {
       try {
         const res = await fetch(
@@ -211,10 +327,42 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
         ayah,
         verse,
         chapterLabel: label ? `${label} · Ayah ${ayah}` : undefined,
+        audioSource: "recitation",
       });
     },
     [chapter?.nameSimple],
   );
+
+  const onListenQuranEnc = useCallback(
+    (surah: number, ayah: number, verse: VerseDto) => {
+      if (!selectedQuranEncKey?.trim()) return;
+      const label = chapter?.nameSimple?.trim();
+      setAudioTarget({
+        surah,
+        ayah,
+        verse,
+        chapterLabel: label ? `${label} · Ayah ${ayah}` : undefined,
+        audioSource: "quranenc_translation",
+        quranEncTranslationKey: selectedQuranEncKey.trim(),
+      });
+    },
+    [chapter?.nameSimple, selectedQuranEncKey],
+  );
+
+  const qeMetaLine = useMemo(() => {
+    if (!qeOverlay) return "";
+    const bits = [
+      qeOverlay.translationTitle?.trim(),
+      qeOverlay.translationKey ? `key ${qeOverlay.translationKey}` : null,
+      qeOverlay.translationVersion != null && qeOverlay.translationVersion !== ""
+        ? `v${qeOverlay.translationVersion}`
+        : null,
+      qeOverlay.languageIso?.trim()
+        ? qeOverlay.languageIso.trim().toUpperCase()
+        : null,
+    ].filter(Boolean) as string[];
+    return bits.join(" · ");
+  }, [qeOverlay]);
 
   useEffect(() => {
     if (!highlightAyah || !verses?.length) return;
@@ -300,6 +448,19 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <label className="hidden sm:flex items-center gap-1.5 rounded-full border border-black/10 bg-background/90 px-2 py-1.5 text-[0.58rem] font-semibold uppercase tracking-wide text-muted cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="accent-accent rounded border-black/20"
+                checked={offlinePrepIntent}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  writeOfflineReadingPrepIntent(on);
+                  setOfflinePrepIntent(on);
+                }}
+              />
+              Offline prep
+            </label>
             <button
               type="button"
               onClick={() => setFocusMode((r) => !r)}
@@ -377,6 +538,42 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
             <span className="text-xs font-bold text-accent whitespace-nowrap">Listen again →</span>
           </Link>
         ) : null}
+
+        <label className="sm:hidden flex items-center justify-between gap-3 rounded-[1.25rem] border border-black/[0.08] bg-surface px-4 py-3 text-sm">
+          <span className="text-muted leading-snug">
+            <strong className="text-ink">Download for offline reading</strong>
+            <span className="block text-xs mt-0.5">
+              Saves your intent for a future sync job — packs are not written yet.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-5 w-5 accent-accent rounded border-black/20 shrink-0"
+            checked={offlinePrepIntent}
+            onChange={(e) => {
+              const on = e.target.checked;
+              writeOfflineReadingPrepIntent(on);
+              setOfflinePrepIntent(on);
+            }}
+            aria-label="Prepare surah packs for offline reading"
+          />
+        </label>
+
+        {offlinePrepIntent ? (
+          <p className="rounded-2xl border border-accent/20 bg-accent-soft/25 px-4 py-3 text-xs text-ink/90">
+            Offline prep is on — we will hydrate translation JSON, Mushaf glyphs, and permitted
+            QuranEnc audio pointers when the background sync ships (Expo-friendly).
+          </p>
+        ) : null}
+
+        {qeOverlayError ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-xs text-amber-950">
+            {qeOverlayError}
+          </p>
+        ) : null}
+        {qeOverlayLoading && selectedQuranEncKey ? (
+          <p className="text-[0.7rem] text-muted px-1">Loading QuranEnc surah pack…</p>
+        ) : null}
       </div>
 
       {!readingMode && !focusMode ? (
@@ -411,14 +608,28 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
         translations={translations}
         selectedTranslation={selectedTranslation}
         onSelect={(value) => setSelectedTranslation(value)}
+        quranEncLanguageGroups={quranEncLanguageGroups}
+        selectedQuranEncKey={selectedQuranEncKey}
+        onSelectQuranEncKey={(key) => setSelectedQuranEncKey(key)}
+        quranEncCatalogError={quranEncCatalogError}
       />
+
+      {verseOfflineBanner ? (
+        <p className="rounded-2xl border border-accent/20 bg-accent-soft/25 px-4 py-3 text-[0.7rem] text-ink leading-relaxed">
+          {verseOfflineBanner}
+        </p>
+      ) : null}
 
       {loading ? (
         <AyahReaderSkeletonBlocks />
       ) : error ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          {error}
-        </p>
+        <QuranServiceEmptyState
+          title="Verses paused for this surah"
+          description={error}
+          serviceMeta={versesServiceMeta}
+          retryable={versesRetryable}
+          onReconnect={versesRetryable ? () => void reloadVerses() : undefined}
+        />
       ) : (
         <div
           className={cn(
@@ -429,7 +640,23 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
             "motion-safe:[&>*]:animate-quran-soft-in motion-reduce:[&>*]:animate-none",
           )}
         >
-          {verses?.map((v) => (
+          {verses?.map((v) => {
+            const qeRow = selectedQuranEncKey
+              ? qeByAyah.get(v.verseNumber)
+              : undefined;
+            const quranEncBlock =
+              qeRow && selectedQuranEncKey
+                ? {
+                    translation: qeRow.translation,
+                    footnotes: qeRow.footnotes,
+                    metaLine:
+                      qeMetaLine.trim() ||
+                      (qeOverlay?.translationKey
+                        ? `key ${qeOverlay.translationKey}`
+                        : `key ${selectedQuranEncKey}`),
+                  }
+                : null;
+            return (
             <AyahReadingCard
               key={v.verseKey}
               verse={v}
@@ -464,22 +691,81 @@ export function SurahReaderScreen({ surahNumber, highlightAyah }: Props) {
               }}
               onOpenTafsir={() => setTafsirAyah({ s: surahNumber, a: v.verseNumber })}
               onListen={() => onListen(surahNumber, v.verseNumber, v)}
+              quranEncBlock={quranEncBlock}
+              onListenQuranEnc={
+                selectedQuranEncKey
+                  ? () => onListenQuranEnc(surahNumber, v.verseNumber, v)
+                  : undefined
+              }
             />
-          ))}
+            );
+          })}
         </div>
       )}
 
-      <p className="text-[0.7rem] text-muted leading-relaxed px-0.5 pb-4">
-        {QURAN_REFLECTION_FOOTER}
-      </p>
+      <div className="space-y-3 px-0.5 pb-4">
+        {selectedQuranEncKey ? (
+          <p className="text-[0.68rem] text-muted leading-relaxed border-t border-black/[0.06] pt-4">
+            {QURANENC_ATTRIBUTION_LINE}{" "}
+            <a
+              href={QURANENC_TERMS_URL}
+              className="text-accent underline-offset-2 hover:underline font-medium"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Terms & policies
+            </a>
+            {" · "}
+            <a
+              href={QURANENC_HOME_URL}
+              className="text-accent underline-offset-2 hover:underline font-medium"
+              target="_blank"
+              rel="noreferrer"
+            >
+              QuranEnc
+            </a>
+            {qeOverlay?.translationVersion != null && qeOverlay.translationVersion !== "" ? (
+              <span className="block mt-1 text-[0.62rem] text-muted/90">
+                Active pack metadata: {qeOverlay.translationKey} · v
+                {qeOverlay.translationVersion}
+              </span>
+            ) : selectedQuranEncKey ? (
+              <span className="block mt-1 text-[0.62rem] text-muted/90">
+                Active translation key: {qeOverlay?.translationKey ?? selectedQuranEncKey}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+        <p className="text-[0.7rem] text-muted leading-relaxed">
+          {QURAN_REFLECTION_FOOTER}
+        </p>
+      </div>
 
-      <QuranStickyPlayer
-        target={audioTarget}
-        audioUrl={audioUrl}
-        loading={audioLoading}
-        error={audioError}
-        onDismiss={() => setAudioTarget(null)}
-      />
+      {audioTarget?.audioSource === "quranenc_translation" ? (
+        <LanguageAudioPlayer
+          visible
+          ayahCaption={
+            audioTarget.chapterLabel ??
+            `Surah ${audioTarget.surah} · Ayah ${audioTarget.ayah}`
+          }
+          audioUrl={audioUrl}
+          loading={audioLoading}
+          error={audioError}
+          attributionLine={playerAttributionLine}
+          translationKeyLabel={selectedQuranEncKey}
+          onDismiss={() => setAudioTarget(null)}
+        />
+      ) : (
+        <QuranStickyPlayer
+          target={audioTarget}
+          audioUrl={audioUrl}
+          loading={audioLoading}
+          error={audioError}
+          audioSourceLabel={playerSourceLabel}
+          attributionLine={playerAttributionLine}
+          onDismiss={() => setAudioTarget(null)}
+        />
+      )}
 
       {tafsirSheetEverOpened && tafsirTarget ? (
         <QuranAyahSheet

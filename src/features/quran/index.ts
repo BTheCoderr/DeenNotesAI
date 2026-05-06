@@ -3,6 +3,7 @@
  * re-used from a future Expo package by aliasing `@/features/quran`.
  */
 
+export { QuranServiceEmptyState } from "./components/QuranServiceEmptyState";
 export { QuranAyahSheet } from "./components/QuranAyahSheet";
 export { QuranReferencePills } from "./components/QuranReferencePills";
 export { SurahListScreen } from "./screens/SurahListScreen";

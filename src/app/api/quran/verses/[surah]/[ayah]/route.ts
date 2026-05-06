@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-
-import { guardQuranOrExecute, parseQueryIdList } from "@/app/api/quran/_shared";
+import {
+  guardQuranOrExecute,
+  parseQueryIdList,
+  quranInvalidRequest,
+  quranNotFoundResponse,
+  safeQuranApiSuccess,
+} from "@/app/api/quran/_shared";
 import { fetchVerseByKey } from "@/lib/quran/verses";
 
 type Params = Promise<{ surah: string; ayah: string }>;
@@ -19,10 +23,7 @@ export async function GET(request: Request, segment: { params: Params }) {
     s > 114 ||
     a < 1
   ) {
-    return NextResponse.json(
-      { error: "Invalid surah or ayah." },
-      { status: 400 },
-    );
+    return quranInvalidRequest("Invalid surah or ayah.");
   }
 
   const { searchParams } = new URL(request.url);
@@ -39,9 +40,9 @@ export async function GET(request: Request, segment: { params: Params }) {
   const res = await guardQuranOrExecute(async () => {
     const verse = await fetchVerseByKey(s, a, opts);
     if (!verse) {
-      return NextResponse.json({ error: "Ayah not found." }, { status: 404 });
+      return quranNotFoundResponse("Ayah not found.");
     }
-    return NextResponse.json(
+    return safeQuranApiSuccess(
       { verse },
       {
         headers: {

@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
-
-import { guardQuranOrExecute } from "@/app/api/quran/_shared";
+import {
+  guardQuranOrExecute,
+  quranInvalidRequest,
+  quranNotFoundResponse,
+  safeQuranApiSuccess,
+} from "@/app/api/quran/_shared";
 import { fetchChapterById } from "@/lib/quran/chapters";
 
 type Params = Promise<{ id: string }>;
@@ -10,16 +13,16 @@ export async function GET(_request: Request, segment: { params: Params }) {
   const n = Number(id);
 
   if (!Number.isFinite(n) || n !== Math.floor(n) || n < 1 || n > 114) {
-    return NextResponse.json({ error: "Invalid chapter id." }, { status: 400 });
+    return quranInvalidRequest("Invalid chapter id.");
   }
 
   return guardQuranOrExecute(async () => {
     const chapter = await fetchChapterById(n);
     if (!chapter) {
-      return NextResponse.json({ error: "Chapter not found." }, { status: 404 });
+      return quranNotFoundResponse("Chapter not found.");
     }
 
-    return NextResponse.json(
+    return safeQuranApiSuccess(
       { chapter },
       {
         headers: {

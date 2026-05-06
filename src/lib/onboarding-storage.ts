@@ -1,6 +1,8 @@
 export const ONBOARDING_STORAGE_KEY = "deennotes_onboarding_v1";
 
 export type OnboardingAnswers = {
+  /** QuranEnc translator row persisted on-device when user selects one during onboarding */
+  preferredQuranEncTranslationKey?: string | null;
   purpose: string;
   ageGroup: string;
   userType: string;
@@ -28,7 +30,16 @@ export function readOnboardingFromLocal():
     ) {
       return null;
     }
+    let preferredQE: string | null | undefined;
+    const pk = (o as { preferredQuranEncTranslationKey?: unknown })
+      .preferredQuranEncTranslationKey;
+    if (pk === null || pk === undefined) preferredQE = undefined;
+    else if (typeof pk === "string") preferredQE = pk;
+    else preferredQE = undefined;
     return {
+      ...(preferredQE !== undefined
+        ? { preferredQuranEncTranslationKey: preferredQE }
+        : {}),
       purpose: o.purpose,
       ageGroup: o.ageGroup,
       userType: o.userType,

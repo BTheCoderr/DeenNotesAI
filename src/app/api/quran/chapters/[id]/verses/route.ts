@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
-
-import { guardQuranOrExecute, parseQueryIdList } from "@/app/api/quran/_shared";
+import {
+  guardQuranOrExecute,
+  parseQueryIdList,
+  safeQuranApiSuccess,
+  quranInvalidRequest,
+} from "@/app/api/quran/_shared";
 import { fetchVersesForChapter } from "@/lib/quran/verses";
 
 type Params = Promise<{ id: string }>;
@@ -9,7 +12,7 @@ export async function GET(request: Request, segment: { params: Params }) {
   const { id } = await segment.params;
   const n = Number(id);
   if (!Number.isFinite(n) || n < 1 || n > 114) {
-    return NextResponse.json({ error: "Invalid surah." }, { status: 400 });
+    return quranInvalidRequest("Invalid surah.");
   }
 
   const { searchParams } = new URL(request.url);
@@ -25,7 +28,7 @@ export async function GET(request: Request, segment: { params: Params }) {
 
   return guardQuranOrExecute(async () => {
     const verses = await fetchVersesForChapter(n, opts);
-    return NextResponse.json(
+    return safeQuranApiSuccess(
       { verses },
       {
         headers: {
