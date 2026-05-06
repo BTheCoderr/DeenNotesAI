@@ -3,20 +3,24 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
 import { queryClient } from "../src/lib/queryClient";
+import { emerald, stone } from "../src/theme";
+
+const headerSurface = stone;
 
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="settings"
           options={{
             headerShown: true,
             title: "Settings",
-            headerStyle: { backgroundColor: "#F6F4F0" },
-            headerTintColor: "#127A63",
+            headerStyle: { backgroundColor: headerSurface },
+            headerTintColor: emerald,
           }}
         />
         <Stack.Screen
@@ -25,8 +29,35 @@ export default function RootLayout() {
             presentation: "modal",
             headerShown: true,
             title: "New reflection",
-            headerStyle: { backgroundColor: "#F6F4F0" },
-            headerTintColor: "#127A63",
+            headerStyle: { backgroundColor: headerSurface },
+            headerTintColor: emerald,
+          }}
+        />
+        <Stack.Screen
+          name="compose/[mode]"
+          options={{
+            headerShown: true,
+            title: "Compose",
+            headerStyle: { backgroundColor: headerSurface },
+            headerTintColor: emerald,
+          }}
+        />
+        <Stack.Screen
+          name="notes/[id]"
+          options={{
+            headerShown: true,
+            title: "Reflection",
+            headerStyle: { backgroundColor: headerSurface },
+            headerTintColor: emerald,
+          }}
+        />
+        <Stack.Screen
+          name="quran/[surah]"
+          options={{
+            headerShown: true,
+            title: "Reader",
+            headerStyle: { backgroundColor: headerSurface },
+            headerTintColor: emerald,
           }}
         />
       </Stack>
