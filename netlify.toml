@@ -1,3 +1,6 @@
+# Deploy: connect this GitHub repo under Netlify → Site configuration → Build & deploy
+# → Continuous deployment → Link repository. Each push runs the build command below.
+#
 # Supabase NEXT_PUBLIC_* client keys are embedded in the browser bundle by design.
 # If Netlify marks those variables as "Contains secret values", secret scanning will
 # match the inlined JWT against build output and fail. Omit them from secret-value
@@ -6,5 +9,15 @@
 # AI_PROVIDER / *_MODEL are not secrets; if marked secret, scanning matches literals
 # in src/lib/ai/providers/types.ts and fails the build.
 # See: https://ntl.fyi/configure-secrets-scanning
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js SSR on Netlify: the plugin emits the correct publish/handler wiring.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [build.environment]
+  NODE_VERSION = "20"
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,AI_PROVIDER,OPENAI_MODEL,ANTHROPIC_MODEL,GROQ_MODEL"
