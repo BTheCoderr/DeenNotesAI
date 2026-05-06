@@ -100,6 +100,8 @@ export async function POST(request: NextRequest) {
       dua_prompts: ai.dua_prompts,
       share_card_text: ai.share_card_text,
       disclaimer,
+      quran_refs:
+        ai.quran_refs && ai.quran_refs.length ? ai.quran_refs : null,
     })
     .select("id")
     .single();

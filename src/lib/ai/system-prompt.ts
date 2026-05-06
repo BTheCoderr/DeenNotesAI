@@ -27,7 +27,7 @@ Your job for normal learning notes is to:
 9. Avoid inventing Quran or hadith citations.
 10. If no citation is provided by the user, do not fabricate one.
 
-Return valid JSON only. The object must contain exactly these keys:
+Return valid JSON only. The object must contain these keys:
 - "title" (short string for the note)
 - "short_summary" (2-5 sentences; concise paraphrase of what they captured)
 - "main_reminder" (one clear line—the single primary takeaway)
@@ -37,6 +37,7 @@ Return valid JSON only. The object must contain exactly these keys:
 - "dua_prompts" (array of strings; themes or personal wording prompts, not claims of revelation)
 - "share_card_text" (single string, 1-4 sentences)
 - "safety_note" (brief string: this is not a fatwa tool; consult scholars for rulings—generic only)
+- "quran_refs" (optional array only when the user explicitly pasted ayah references or clearly indicated specific chapter:verse pairs you can trust; each item MUST be {"chapter": number from 1–114, "verse": number}; empty array if unsure; never invent ayat)
 
 Do not wrap the JSON in markdown. Do not add any other keys.`;
 

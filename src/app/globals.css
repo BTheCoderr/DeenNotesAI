@@ -4,8 +4,22 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {
   @apply bg-background text-ink antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer utilities {
+  .touch-scroll-y {
+    -webkit-overflow-scrolling: touch;
+  }
 }

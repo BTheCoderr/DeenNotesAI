@@ -141,6 +141,8 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
 
 ## Deploy on Netlify
 
+Before closing out a release, follow **[docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md)** (commit/push → confirm Netlify commit → curl route health).
+
 1. In the site’s **Environment variables**, set **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** for your Supabase project.
 2. If **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** might be wrong or from another project, **remove it**. The app uses **publishable first** when it is non-empty, but deleting a bad anon avoids confusion and mistaken “which key is live?” during rollouts.
 3. Run **Deploys → Clear cache and deploy site** after any `NEXT_PUBLIC_*` change so the new values are inlined into the client bundle.

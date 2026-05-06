@@ -53,6 +53,8 @@ export type Database = {
           dua_prompts: Json;
           share_card_text: string;
           disclaimer: string;
+          /** Structured ayah refs `{ chapter, verse }[]` — optional legacy null */
+          quran_refs: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -71,6 +73,7 @@ export type Database = {
           dua_prompts?: Json;
           share_card_text?: string;
           disclaimer: string;
+          quran_refs?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -89,6 +92,7 @@ export type Database = {
           dua_prompts?: Json;
           share_card_text?: string;
           disclaimer?: string;
+          quran_refs?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

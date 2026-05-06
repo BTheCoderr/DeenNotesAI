@@ -4,6 +4,7 @@ import {
   NoteDetailScreen,
   type NoteDetailPayload,
 } from "@/components/notes/note-detail";
+import { asQuranRefs } from "@/lib/quran/quran-refs-json";
 import { asStringArray } from "@/lib/note-json";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,6 +39,7 @@ export default async function NoteDetailPage({ params }: Props) {
     share_card_text: note.share_card_text,
     disclaimer: note.disclaimer,
     raw_input: note.raw_input,
+    quran_refs: asQuranRefs(note.quran_refs),
   };
 
   return <NoteDetailScreen note={payload} />;

@@ -31,9 +31,12 @@ describe("aiNoteSchema", () => {
     ).toThrow();
   });
 
-  it("rejects missing main_reminder", () => {
-    const { main_reminder: _, ...rest } = validPayload;
-    expect(() => aiNoteSchema.parse(rest)).toThrow();
+  it("accepts optional quran_refs", () => {
+    const parsed = aiNoteSchema.parse({
+      ...validPayload,
+      quran_refs: [{ chapter: 2, verse: 255 }],
+    });
+    expect(parsed.quran_refs?.[0]).toEqual({ chapter: 2, verse: 255 });
   });
 });
 

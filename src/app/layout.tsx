@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 
 import { SafetyNotice } from "@/components/SafetyNotice";
+import { getSiteUrl } from "@/lib/site";
 
 import "./globals.css";
 
@@ -22,6 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: "DeenNotes AI",
     template: "%s · DeenNotes AI",

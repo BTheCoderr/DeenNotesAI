@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { DeenNotesLogo } from "@/components/brand/DeenNotesLogo";
@@ -68,6 +69,7 @@ async function persistOnboardingRemote(answers: OnboardingAnswers) {
 }
 
 export function OnboardingScreen() {
+  const reduceMotion = useReducedMotion();
   const [step, setStep] = useState(0);
   const [purpose, setPurpose] = useState<string>(PURPOSE_OPTIONS[0]);
   const [ageGroup, setAgeGroup] = useState<string>(AGE_GROUPS[1]);
@@ -139,19 +141,33 @@ export function OnboardingScreen() {
       {step > 0 && step < 5 ? (
         <div className="flex gap-2 justify-center px-4">
           {[1, 2, 3, 4].map((n) => (
-            <span
+            <motion.span
               key={n}
+              layout
               className={
                 step >= n
                   ? "h-1.5 flex-1 rounded-full bg-accent max-w-[2.5rem]"
                   : "h-1.5 flex-1 rounded-full bg-black/10 max-w-[2.5rem]"
               }
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
               aria-hidden
             />
           ))}
         </div>
       ) : null}
 
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduceMotion ? undefined : { opacity: 0, y: -12 }}
+          transition={{
+            duration: reduceMotion ? 0 : 0.38,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className="space-y-6"
+        >
       {step === 0 ? (
         <section className="text-center px-2 space-y-4">
           <h1 className="font-display text-[1.85rem] sm:text-[2rem] font-semibold text-ink leading-snug">
@@ -286,6 +302,8 @@ export function OnboardingScreen() {
           </Link>
         </section>
       ) : null}
+        </motion.div>
+      </AnimatePresence>
 
       {step >= 1 && step <= 4 ? (
         <div className="flex flex-col-reverse sm:flex-row gap-3 px-2 pt-2">

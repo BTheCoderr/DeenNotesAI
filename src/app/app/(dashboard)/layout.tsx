@@ -47,7 +47,7 @@ export default async function AppSectionLayout({
           </div>
         </header>
 
-        <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-6 md:py-10 pb-28 md:pb-10">
+        <main className="touch-scroll-y flex-1 max-w-2xl w-full mx-auto px-4 py-6 md:py-10 pb-[max(8.5rem,calc(7rem+env(safe-area-inset-bottom)))] md:pb-10 overscroll-y-contain">
           {children}
         </main>
       </div>

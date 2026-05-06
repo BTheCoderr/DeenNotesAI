@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { NOTE_TYPE_LABELS } from "@/lib/constants";
@@ -21,11 +21,14 @@ const FORM_ID = "new-note-form";
 type NewNoteFormProps = {
   initialNoteType?: NoteTypeEnum;
   showOnboardingHint?: boolean;
+  /** Optional prefilled context (e.g. from Qur'an reader). Applied when input is empty on load. */
+  reflectionSeed?: string;
 };
 
 export function NewNoteForm({
   initialNoteType,
   showOnboardingHint = false,
+  reflectionSeed,
 }: NewNoteFormProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -33,6 +36,14 @@ export function NewNoteForm({
     initialNoteType ?? "khutbah",
   );
   const [rawInput, setRawInput] = useState("");
+
+  useEffect(() => {
+    if (!reflectionSeed?.trim()) return;
+    setRawInput((prev) => {
+      if (prev.trim().length > 0) return prev;
+      return `${reflectionSeed.trim()}\n\n`;
+    });
+  }, [reflectionSeed]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
