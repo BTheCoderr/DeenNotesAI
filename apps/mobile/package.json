@@ -5,7 +5,9 @@
   "scripts": {
     "start": "expo start",
     "start:clear": "expo start --clear",
+    "mobile:clear": "expo start --clear",
     "icons": "node ../../scripts/export-mobile-brand-icons.cjs",
+    "mobile:icons": "node ../../scripts/export-mobile-brand-icons.cjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
