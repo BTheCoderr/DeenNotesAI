@@ -2,7 +2,7 @@ import {
   PRIMARY_TAB_CONTRACT,
   SETTINGS_PROFILE_ROUTE as SHARED_SETTINGS_PROFILE_ROUTE,
   type PrimaryTabId,
-} from "../../../../src/shared/navigation";
+} from "@shared/navigation";
 
 export type MobileTabId = PrimaryTabId;
 
