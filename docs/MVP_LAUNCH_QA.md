@@ -7,7 +7,7 @@ Manual checklist for ~10 beta users. Run in **staging** first, then **production
 - [ ] **CLI (optional):** `supabase link --project-ref YOUR_PROJECT_REF` uses the **Project Ref** from **Supabase → Project Settings → General** (same placeholder as in [README](../README.md#supabase-cli-workflow)).
 - [ ] `001_init.sql` and **`002_short_summary_main_reminder.sql`** applied (or fresh `001` that already includes `short_summary` / `main_reminder`).
 - [ ] Supabase **Authentication → URL configuration**: Site URL and redirect URLs match your deployment (e.g. `https://yourapp.vercel.app/auth/callback`).
-- [ ] Env vars set: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and/or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same value is OK), `AI_PROVIDER`, matching provider API key. `SUPABASE_SERVICE_ROLE_KEY` only on the server if used—never `NEXT_PUBLIC_*`.
+- [ ] Env vars set: `NEXT_PUBLIC_SUPABASE_URL`, **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** (preferred) and/or `NEXT_PUBLIC_SUPABASE_ANON_KEY` as fallback, `AI_PROVIDER`, matching provider API key. After changes to `NEXT_PUBLIC_*`, **Clear cache and deploy** on Netlify. `SUPABASE_SERVICE_ROLE_KEY` only on the server if used—never `NEXT_PUBLIC_*`.
 - [ ] Optional: `NEXT_PUBLIC_BETA_FEEDBACK_EMAIL` for one-click feedback mailto recipient.
 
 ## Security & positioning (must pass)

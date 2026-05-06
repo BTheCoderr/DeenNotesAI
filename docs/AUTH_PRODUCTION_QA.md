@@ -5,9 +5,13 @@ Use this checklist to separate **credential errors** (wrong email/password, unco
 ## Environment parity
 
 - [ ] **Netlify** `NEXT_PUBLIC_SUPABASE_URL` matches the **Supabase project** you use in the dashboard (Project Settings → API → Project URL).
-- [ ] **Netlify** has **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** and/or **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** set to that same project’s **anon / publishable** key (not `service_role`).
-- [ ] After changing any `NEXT_PUBLIC_*` variable, trigger a **new deploy** (prefer **Clear cache and deploy**). These values are inlined at build time.
+- [ ] **Netlify** has **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** set to that project’s **publishable** client key (not `service_role`). The app prefers this over `NEXT_PUBLIC_SUPABASE_ANON_KEY` when both exist; if you previously had a **wrong or stale anon** in Netlify, **delete `NEXT_PUBLIC_SUPABASE_ANON_KEY`** there until you are sure it matches the same project, so the build cannot pick the bad value.
+- [ ] After changing any `NEXT_PUBLIC_*` variable, trigger **Clear cache and deploy site**. These values are inlined at build time; skipping cache clear can ship an old client bundle.
 - [ ] Local `.env` (if used) targets the **same project** you expect in production when comparing behavior.
+
+## After Supabase `NEXT_PUBLIC_*` changes on Netlify
+
+- [ ] **Hard refresh** the production site, **sign in again**, open **`/app/new`**, and run **generate note** once (confirms client bundle, cookies, and `/api/generate-note` agree).
 
 ## Fresh user (signup path)
 

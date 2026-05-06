@@ -3,7 +3,10 @@ import { cookies } from "next/headers";
 
 import { getSupabaseBrowserConfig } from "./env";
 
-/** Use in Route Handlers when cookies must be written (e.g. OAuth code exchange). */
+/**
+ * Use when cookies must be written via `next/headers` only (e.g. OAuth code exchange).
+ * For JSON API routes, use {@link createSupabaseApiRouteContext} in `api-route.ts`.
+ */
 export async function createRouteHandlerClient() {
   const cookieStore = await cookies();
   const { url, anonKey } = getSupabaseBrowserConfig();

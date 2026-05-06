@@ -4,6 +4,7 @@ import { DeenNotesCompactLogo } from "@/components/brand/DeenNotesCompactLogo";
 import { DeenNotesLogo } from "@/components/brand/DeenNotesLogo";
 import { DesktopAppNav } from "@/components/DesktopAppNav";
 import { MobileAppNav } from "@/components/MobileAppNav";
+import { DashboardProviders } from "@/components/app/NewNoteMenuContext";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppSectionLayout({
@@ -17,7 +18,8 @@ export default async function AppSectionLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <div className="min-h-dvh bg-background flex flex-col md:flex-row">
+    <DashboardProviders>
+      <div className="min-h-dvh bg-background flex flex-col md:flex-row">
       <aside className="hidden md:flex md:flex-col md:w-56 md:shrink-0 border-r border-black/5 bg-surface p-6 gap-8">
         <Link
           href="/app"
@@ -52,5 +54,6 @@ export default async function AppSectionLayout({
 
       <MobileAppNav />
     </div>
+    </DashboardProviders>
   );
 }

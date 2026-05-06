@@ -45,13 +45,6 @@ export function SettingsForm({ email, displayName }: Props) {
     router.refresh();
   }
 
-  async function signOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.replace("/");
-    router.refresh();
-  }
-
   return (
     <div className="space-y-6">
       <form
@@ -98,20 +91,6 @@ export function SettingsForm({ email, displayName }: Props) {
           {loading ? "Saving…" : "Save profile"}
         </button>
       </form>
-
-      <div className="rounded-2xl border border-black/5 bg-surface p-5 md:p-6 shadow-sm">
-        <h2 className="font-semibold text-ink">Session</h2>
-        <p className="text-sm text-muted mt-2">
-          Sign out on this device. Your notes stay in your account.
-        </p>
-        <button
-          type="button"
-          onClick={signOut}
-          className="mt-4 rounded-full border border-black/15 px-6 py-2.5 text-sm font-semibold text-ink hover:bg-background transition-colors"
-        >
-          Sign out
-        </button>
-      </div>
     </div>
   );
 }

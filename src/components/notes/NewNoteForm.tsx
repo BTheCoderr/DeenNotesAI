@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { NOTE_TYPE_LABELS } from "@/lib/constants";
 import type { NoteTypeEnum } from "@/lib/database.types";
 import { NEW_NOTE_USE_CASES } from "@/lib/note-samples";
+import { safeAppPath } from "@/lib/safe-app-path";
 
 const noteTypes: NoteTypeEnum[] = [
   "khutbah",
@@ -17,9 +18,20 @@ const noteTypes: NoteTypeEnum[] = [
 
 const FORM_ID = "new-note-form";
 
-export function NewNoteForm() {
+type NewNoteFormProps = {
+  initialNoteType?: NoteTypeEnum;
+  showOnboardingHint?: boolean;
+};
+
+export function NewNoteForm({
+  initialNoteType,
+  showOnboardingHint = false,
+}: NewNoteFormProps) {
   const router = useRouter();
-  const [noteType, setNoteType] = useState<NoteTypeEnum>("khutbah");
+  const pathname = usePathname();
+  const [noteType, setNoteType] = useState<NoteTypeEnum>(
+    initialNoteType ?? "khutbah",
+  );
   const [rawInput, setRawInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,10 +43,22 @@ export function NewNoteForm() {
     try {
       const res = await fetch("/api/generate-note", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ noteType, rawInput }),
       });
-      const data = (await res.json()) as { noteId?: string; error?: string };
+      let data: { noteId?: string; error?: string } = {};
+      try {
+        data = (await res.json()) as { noteId?: string; error?: string };
+      } catch {
+        /* non-JSON body */
+      }
+      if (res.status === 401) {
+        setLoading(false);
+        const next = encodeURIComponent(safeAppPath(pathname ?? "/app/new"));
+        router.push(`/login?next=${next}`);
+        return;
+      }
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
         setLoading(false);
@@ -62,6 +86,11 @@ export function NewNoteForm() {
         className="scroll-mt-28"
         aria-label="Reflection form"
       >
+        {showOnboardingHint ? (
+          <p className="mb-5 rounded-2xl border border-mint/60 bg-surface px-4 py-3.5 text-center text-sm text-ink/90 leading-relaxed">
+            Start simple. Paste whatever you remember — messy notes are fine.
+          </p>
+        ) : null}
         <form id={FORM_ID} onSubmit={onSubmit} className="space-y-5">
         <div className="space-y-2">
           <label

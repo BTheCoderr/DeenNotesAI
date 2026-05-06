@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { generateNoteFromRaw } from "@/lib/ai";
 import { APP_DISCLAIMER, NOTE_TYPE_LABELS } from "@/lib/constants";
 import type { NoteTypeEnum } from "@/lib/database.types";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createSupabaseApiRouteContext,
+} from "@/lib/supabase/api-route";
+
+const SESSION_ERROR = "Your session expired. Please sign in again.";
 
 const noteTypes = [
   "khutbah",
@@ -21,14 +25,31 @@ const bodySchema = z.object({
     .min(1, "Paste your notes so DeenNotes can reflect them back."),
 });
 
-export async function POST(request: Request) {
-  const supabase = await createClient();
+function logApiAuthDebug(
+  route: string,
+  request: NextRequest,
+  hasUser: boolean,
+  hasAuthCookies: boolean,
+) {
+  if (process.env.NODE_ENV !== "development") return;
+  console.log("[deennotes api auth]", {
+    route,
+    pathname: request.nextUrl.pathname,
+    hasUser,
+    hasAuthCookies,
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const { supabase, hasAuthCookies } = await createSupabaseApiRouteContext();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  logApiAuthDebug("POST /api/generate-note", request, Boolean(user), hasAuthCookies);
+
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: SESSION_ERROR }, { status: 401 });
   }
 
   let json: unknown;

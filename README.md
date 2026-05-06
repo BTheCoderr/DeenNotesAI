@@ -12,7 +12,7 @@ Before inviting the first ~10 beta users:
 
 1. **Database** — Run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql). If this project ran an older `001` without `short_summary` / `main_reminder`, also run [`supabase/migrations/002_short_summary_main_reminder.sql`](supabase/migrations/002_short_summary_main_reminder.sql). Confirm RLS stays enabled on `profiles`, `deen_notes`, and `saved_share_cards` (see [verification SQL](#verify-schema-and-rls-after-db-push) below).
 2. **Supabase Auth** — Site URL and redirect URLs match your deployment (`/auth/callback`). Decide production email confirmation behavior.
-3. **Environment** — Set variables from [`.env.example`](.env.example) on the host. Use `NEXT_PUBLIC_SUPABASE_ANON_KEY` and/or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same value is fine if the dashboard only shows **publishable**). Never put **service_role** in `NEXT_PUBLIC_*`; keep `SUPABASE_SERVICE_ROLE_KEY` server-only and out of the browser bundle.
+3. **Environment** — Set variables from [`.env.example`](.env.example) on the host. Prefer **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`**; **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** is an optional fallback when publishable is unset. Never put **service_role** in `NEXT_PUBLIC_*`; keep `SUPABASE_SERVICE_ROLE_KEY` server-only and out of the browser bundle.
 4. **AI** — Verify `AI_PROVIDER` and API keys; smoke-test note generation in staging.
 5. **QA** — Complete and sign off [`docs/MVP_LAUNCH_QA.md`](docs/MVP_LAUNCH_QA.md).
 6. **Positioning** — Copy stays humble: journal and reflection, not scholar or fatwa replacement.
@@ -29,6 +29,21 @@ Before inviting the first ~10 beta users:
 - A [Supabase](https://supabase.com) project
 - An API key for at least one AI provider
 - Optional: [Supabase CLI](https://supabase.com/docs/guides/cli) for `db push`
+- Optional: [Netlify CLI](https://docs.netlify.com/cli/get-started/) (installed in this repo as a dev dependency — use `npm run ntl -- …` from the repo root)
+
+## Netlify CLI
+
+From the repo root, the CLI is available without a global install:
+
+```bash
+npm run ntl -- --version
+npm run ntl -- status
+npm run ntl -- link
+npm run netlify:deploy
+npm run netlify:deploy:prod
+```
+
+For **non-interactive** use (agents, CI, scripts), set `NETLIFY_AUTH_TOKEN` in `.env.local` (create a personal access token under [Netlify → User settings → Applications](https://app.netlify.com/user/applications#oauth)). For a one-time interactive login on your machine: `npm run ntl -- login`.
 
 ## Supabase CLI workflow
 
@@ -88,7 +103,7 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
 
 2. **Configure Supabase**
 
-   - **Settings → API**: copy project URL (e.g. `https://YOUR_PROJECT_REF.supabase.co`) and the **anon** and/or **publishable** client key (never the `service_role` key for `NEXT_PUBLIC_*`).
+   - **Settings → API**: copy project URL (e.g. `https://YOUR_PROJECT_REF.supabase.co`) and the **publishable** client key (or legacy **anon** key — same permission level; never the `service_role` key for `NEXT_PUBLIC_*`).
    - **Authentication → URL configuration**: set **Site URL** to `http://localhost:3000` (and your production URL on Vercel).
    - Redirects: `http://localhost:3000/auth/callback` (and `https://your-domain.com/auth/callback` in production).
 
@@ -105,7 +120,7 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
    cp .env.example .env.local
    ```
 
-   Fill in at minimum: `NEXT_PUBLIC_SUPABASE_URL`, one of the client keys (`NEXT_PUBLIC_SUPABASE_ANON_KEY` and/or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), `AI_PROVIDER`, the matching model env (`OPENAI_MODEL` / `ANTHROPIC_MODEL` / `GROQ_MODEL`), and that provider’s API key. Do not commit `.env.local`.
+   Fill in at minimum: `NEXT_PUBLIC_SUPABASE_URL`, **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `AI_PROVIDER`, the matching model env (`OPENAI_MODEL` / `ANTHROPIC_MODEL` / `GROQ_MODEL`), and that provider’s API key. Do not commit `.env.local`.
 
 5. **Auth for local dev**
 
@@ -123,6 +138,15 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
 
 - Import the repo; set the same env vars in the Vercel project (including optional `SUPABASE_SERVICE_ROLE_KEY` only if you add server jobs that need it—never as a public var).
 - Point Supabase **Site URL** and redirect URLs at your Vercel domain.
+
+## Deploy on Netlify
+
+1. In the site’s **Environment variables**, set **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`** for your Supabase project.
+2. If **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** might be wrong or from another project, **remove it**. The app uses **publishable first** when it is non-empty, but deleting a bad anon avoids confusion and mistaken “which key is live?” during rollouts.
+3. Run **Deploys → Clear cache and deploy site** after any `NEXT_PUBLIC_*` change so the new values are inlined into the client bundle.
+4. After deploy, **hard refresh** the site and **sign in again** so session cookies match the deployed URL and keys.
+
+From the repo you can also use **`npm run netlify:deploy:prod`** (see [Netlify CLI](#netlify-cli)); env vars are still managed in the Netlify UI or via `npm run ntl -- env:set …` when authenticated.
 
 ## Scripts
 

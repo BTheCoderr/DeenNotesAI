@@ -38,9 +38,13 @@ export async function updateSession(request: NextRequest) {
   const isApp = path.startsWith("/app");
 
   if (process.env.NODE_ENV === "development") {
+    const hasAuthCookies = request.cookies
+      .getAll()
+      .some((c) => c.name.startsWith("sb-"));
     console.log("[deennotes middleware]", {
       pathname: path,
       hasSession: Boolean(user),
+      hasAuthCookies,
       redirectedToLogin: Boolean(!user && isApp),
     });
   }

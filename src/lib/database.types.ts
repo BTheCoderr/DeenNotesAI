@@ -118,6 +118,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_onboarding_profiles: {
+        Row: {
+          user_id: string;
+          purpose: string | null;
+          age_group: string | null;
+          user_type: string | null;
+          struggles: string[] | null;
+          completed_at: string | null;
+        };
+        Insert: {
+          user_id: string;
+          purpose?: string | null;
+          age_group?: string | null;
+          user_type?: string | null;
+          struggles?: string[] | null;
+          completed_at?: string | null;
+        };
+        Update: {
+          user_id?: string;
+          purpose?: string | null;
+          age_group?: string | null;
+          user_type?: string | null;
+          struggles?: string[] | null;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

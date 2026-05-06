@@ -25,6 +25,9 @@ dist/
 # vercel
 .vercel
 
+# netlify (local link state from `netlify link`)
+.netlify
+
 # ide
 .idea
 .vscode

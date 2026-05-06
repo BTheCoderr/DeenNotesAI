@@ -17,7 +17,7 @@ function logSupabasePublicEnvPresence(): void {
 
 /**
  * Supabase client URL + anonymous/publishable key for browser and server user sessions.
- * At least one of ANON_KEY or PUBLISHABLE_KEY must be set (many dashboards only show publishable).
+ * At least one of PUBLISHABLE_KEY or ANON_KEY must be set. PUBLISHABLE_KEY is preferred when both exist.
  *
  * Optional: set NEXT_PUBLIC_DEBUG_ENV=true (and redeploy on Netlify) to log booleans only—never secret values.
  */
@@ -25,13 +25,13 @@ export function getSupabaseBrowserConfig(): { url: string; anonKey: string } {
   logSupabasePublicEnvPresence();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const publishable = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const anonFallback = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const anonKey = publishable || anonFallback || "";
 
   if (!url || !anonKey) {
     throw new Error(
-      "Missing Supabase configuration: set NEXT_PUBLIC_SUPABASE_URL and either NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (same value as the Supabase publishable/anon key). On Netlify, NEXT_PUBLIC_* vars are inlined at build time—redeploy after changing them.",
+      "Missing Supabase configuration: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (preferred) or NEXT_PUBLIC_SUPABASE_ANON_KEY. On Netlify, NEXT_PUBLIC_* vars are inlined at build time—redeploy after changing them.",
     );
   }
 
