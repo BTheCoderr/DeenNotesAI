@@ -4,6 +4,8 @@ import path from "node:path";
 import type { ConfigContext, ExpoConfig } from "@expo/config";
 import { parse as parseDotenv } from "dotenv";
 
+import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from "./src/lib/legal-urls";
+
 const mobileDir = __dirname;
 const repoRoot = path.resolve(mobileDir, "..", "..");
 
@@ -86,7 +88,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: config.name ?? "DeenNotes",
+    name: config.name ?? "DeenNotes AI",
     slug: config.slug ?? "deennotes",
     runtimeVersion: { policy: "appVersion" },
     plugins,
@@ -103,8 +105,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         : {}),
       revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY?.trim() ?? "",
       revenueCatPremiumEntitlement: process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_PREMIUM?.trim() ?? "",
-      appTermsUrl: process.env.EXPO_PUBLIC_APP_TERMS_URL?.trim() ?? "",
-      appPrivacyUrl: process.env.EXPO_PUBLIC_APP_PRIVACY_URL?.trim() ?? "",
+      appTermsUrl: process.env.EXPO_PUBLIC_APP_TERMS_URL?.trim() || LEGAL_TERMS_URL,
+      appPrivacyUrl: process.env.EXPO_PUBLIC_APP_PRIVACY_URL?.trim() || LEGAL_PRIVACY_URL,
       betaFeedbackEmail: process.env.EXPO_PUBLIC_BETA_FEEDBACK_EMAIL?.trim() ?? "",
     },
   };
