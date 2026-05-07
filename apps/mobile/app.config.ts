@@ -4,7 +4,9 @@ import path from "node:path";
 import type { ConfigContext, ExpoConfig } from "@expo/config";
 import { parse as parseDotenv } from "dotenv";
 
-import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from "./src/lib/legal-urls";
+/** Keep in sync with `src/lib/legal-urls.ts` — inlined so EAS/`expo config` can load without TS path resolution. */
+const LEGAL_TERMS_URL = "https://deennotesai.netlify.app/terms";
+const LEGAL_PRIVACY_URL = "https://deennotesai.netlify.app/privacy";
 
 const mobileDir = __dirname;
 const repoRoot = path.resolve(mobileDir, "..", "..");
