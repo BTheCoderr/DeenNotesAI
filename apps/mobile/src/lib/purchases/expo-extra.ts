@@ -1,5 +1,8 @@
 import Constants from "expo-constants";
 
+import { REVENUECAT_PREMIUM_ENTITLEMENT_FALLBACK } from "../../contracts/premium";
+import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from "../legal-urls";
+
 type Extra = {
   revenueCatIosApiKey?: string;
   revenueCatPremiumEntitlement?: string;
@@ -28,23 +31,19 @@ export function getPremiumEntitlementId(): string {
   return typeof process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_PREMIUM === "string" &&
     process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_PREMIUM.trim()
     ? process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_PREMIUM.trim()
-    : "premium";
+    : REVENUECAT_PREMIUM_ENTITLEMENT_FALLBACK;
 }
 
 export function getLegalTermsUrl(): string {
   const u = readPurchaseExtra().appTermsUrl?.trim();
   if (u) return u;
-  return (
-    process.env.EXPO_PUBLIC_APP_TERMS_URL?.trim() || "https://deennotes.ai/terms"
-  );
+  return process.env.EXPO_PUBLIC_APP_TERMS_URL?.trim() || LEGAL_TERMS_URL;
 }
 
 export function getLegalPrivacyUrl(): string {
   const u = readPurchaseExtra().appPrivacyUrl?.trim();
   if (u) return u;
-  return (
-    process.env.EXPO_PUBLIC_APP_PRIVACY_URL?.trim() || "https://deennotes.ai/privacy"
-  );
+  return process.env.EXPO_PUBLIC_APP_PRIVACY_URL?.trim() || LEGAL_PRIVACY_URL;
 }
 
 /** Destination for beta “Send feedback” mailto — optional; omit when inbox not configured yet. */

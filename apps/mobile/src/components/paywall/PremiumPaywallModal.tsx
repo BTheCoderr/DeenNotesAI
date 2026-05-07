@@ -319,6 +319,14 @@ export function PremiumPaywallModal({
               Free trials and introductory periods convert to paid subscriptions automatically unless canceled at
               least 24 hours before renewal ends, when Apple or your region&apos;s storefront rules apply.
             </Text>
+            <Text style={styles.legalBody}>
+              To cancel subscriptions purchased through Apple, open{" "}
+              <Text style={styles.legalEmph}>Settings → Apple ID → Subscriptions</Text>{" "}
+              (or tap “Manage subscriptions” below). Note: unsubscribing here does not delete your DeenNotes account;
+              use{" "}
+              <Text style={styles.legalEmph}>Settings → Delete account</Text> inside the app if you want profile data
+              removed.
+            </Text>
           </View>
 
           <Text style={styles.sectionHdr}>Immersive devotion with Plus</Text>
@@ -466,6 +474,7 @@ const styles = StyleSheet.create({
   },
   legalHdr: { fontSize: fontSizes.sm, fontWeight: "700", color: ink },
   legalBody: { fontSize: fontSizes.xs, color: muted, lineHeight: 18 },
+  legalEmph: { fontWeight: "700", color: ink },
   lockRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
   lockTitle: { fontSize: fontSizes.sm, fontWeight: "700", color: ink },
   lockBody: { fontSize: fontSizes.sm, color: muted, lineHeight: 19 },

@@ -11,14 +11,12 @@ export function isRevenueCatAvailable(): boolean {
   return Platform.OS === "ios" && Boolean(getRevenueCatIosApiKey());
 }
 
-/** Best-effort; safe no-op when key absent or Android (M8 ships iOS only). */
+/** Best-effort; safe no-op when key absent or Android (iOS storefront primary). */
 export async function configureRevenueCatBootstrap(): Promise<void> {
   if (configured || !isRevenueCatAvailable()) return;
   const apiKey = getRevenueCatIosApiKey();
   await Purchases.configure({ apiKey });
-  if (__DEV__) {
-    Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
-  }
+  Purchases.setLogLevel(__DEV__ ? Purchases.LOG_LEVEL.DEBUG : Purchases.LOG_LEVEL.ERROR);
   configured = true;
 }
 

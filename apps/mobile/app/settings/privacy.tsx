@@ -1,9 +1,8 @@
 import { Linking, Pressable, StyleSheet, Text } from "react-native";
 
 import { P, SettingsDocScreen } from "../../src/components/settings/SettingsDocScreen";
+import { CANONICAL_SITE_ORIGIN, LEGAL_PRIVACY_URL } from "../../src/lib/legal-urls";
 import { emerald, fontSizes, spacing } from "../../src/theme";
-
-const SITE = "https://deennotesai.netlify.app";
 
 export default function SettingsPrivacyScreen() {
   return (
@@ -24,7 +23,7 @@ export default function SettingsPrivacyScreen() {
         behind today.
       </P>
       <Pressable
-        onPress={() => void Linking.openURL(`${SITE}/privacy`).catch(() => {})}
+        onPress={() => void Linking.openURL(LEGAL_PRIVACY_URL).catch(() => {})}
         accessibilityRole="link"
         accessibilityLabel="Open privacy policy on the web"
       >
@@ -32,7 +31,7 @@ export default function SettingsPrivacyScreen() {
       </Pressable>
       <Pressable
         style={styles.secondary}
-        onPress={() => void Linking.openURL(SITE).catch(() => {})}
+        onPress={() => void Linking.openURL(CANONICAL_SITE_ORIGIN).catch(() => {})}
         accessibilityRole="link"
       >
         <Text style={styles.linkMuted}>Open DeenNotes home</Text>

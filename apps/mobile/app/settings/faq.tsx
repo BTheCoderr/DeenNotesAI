@@ -2,6 +2,8 @@ import { Linking, Pressable, StyleSheet, Text } from "react-native";
 
 import { P, Q, SettingsDocScreen } from "../../src/components/settings/SettingsDocScreen";
 
+import { LEGAL_CONTACT_URL } from "../../src/lib/legal-urls";
+
 import { emerald, fontSizes, spacing } from "../../src/theme";
 
 export default function SettingsFaqScreen() {
@@ -61,7 +63,7 @@ export default function SettingsFaqScreen() {
 
       <Pressable
         style={styles.linkBtn}
-        onPress={() => void Linking.openURL("https://deennotesai.netlify.app/contact").catch(() => {})}
+        onPress={() => void Linking.openURL(LEGAL_CONTACT_URL).catch(() => {})}
         accessibilityRole="link"
       >
         <Text style={styles.linkTxt}>Open contact form</Text>

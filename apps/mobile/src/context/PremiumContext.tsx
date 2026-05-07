@@ -34,6 +34,7 @@ import {
   readPremiumCache,
   writePremiumCache,
 } from "../lib/purchases/premium-storage";
+import { presentRevenueCatPaywallForDeenNotes } from "../lib/purchases/revenuecat-paywall-present";
 
 import { logProductEvent } from "../lib/analytics/mobile-product-events";
 import type { PaywallOutcome } from "../components/paywall/PremiumPaywallModal";
@@ -44,6 +45,11 @@ export type PremiumContextValue = {
   isPremium: boolean;
   /** First-time SDK + cache handshake complete (or skipped on unsupported platforms). */
   isHydrated: boolean;
+  /**
+   * True while RevenueCat entitlement is unresolved on a purchases-capable iOS build.
+   * Cached `isPremium` may already be applied to reduce UI flicker.
+   */
+  loading: boolean;
   /** Purchases SDK is linked and an iOS API key is present. */
   purchasesAvailable: boolean;
   /** Free AI generations already completed (local counter). */
@@ -51,7 +57,9 @@ export type PremiumContextValue = {
   openPaywall: (reason?: PremiumGateReason) => void;
   closePaywall: () => void;
   refreshEntitlements: () => Promise<void>;
-  restorePurchases: () => Promise<void>;
+  /** Alias for `refreshEntitlements` — sync entitlements after purchase/restore/session change. */
+  refreshPremiumStatus: () => Promise<void>;
+  restorePurchases: () => Promise<boolean>;
   /** Before calling /api/generate-note for signed-in users. */
   assertAiGenerationAllowed: () => Promise<boolean>;
   /** Call after a successful `/api/generate-note` completion (skipped for khutbah / when not on a paid-capable store build). */
@@ -126,12 +134,6 @@ export function PremiumProvider({ children }: PropsWithChildren) {
     void clearPremiumCache();
   }, []);
 
-  const openPaywall = useCallback((reason: PremiumGateReason = "general") => {
-    logProductEvent("paywall_shown", { reason });
-    setPaywallReason(reason);
-    setPaywallOpen(true);
-  }, []);
-
   const refreshEntitlements = useCallback(async () => {
     if (!isRevenueCatAvailable()) {
       setIsHydrated(true);
@@ -140,6 +142,38 @@ export function PremiumProvider({ children }: PropsWithChildren) {
     await configureRevenueCatBootstrap();
     await applyCustomerInfo(true);
   }, [applyCustomerInfo]);
+
+  const openPaywall = useCallback(
+    (reason: PremiumGateReason = "general") => {
+      logProductEvent("paywall_shown", { reason });
+      setPaywallReason(reason);
+      setPaywallOpen(false);
+
+      void (async () => {
+        const outcome = await presentRevenueCatPaywallForDeenNotes();
+        await refreshEntitlements();
+
+        const closeRcFlow = outcome === "purchased"
+          || outcome === "restored"
+          || outcome === "cancelled"
+          || outcome === "already_entitled";
+
+        if (closeRcFlow) {
+          logProductEvent("paywall_rc_outcome", { reason, outcome });
+          setPaywallOpen(false);
+          setPaywallReason(null);
+          return;
+        }
+
+        logProductEvent("paywall_rc_outcome", {
+          reason,
+          outcome: outcome === "error" ? "error" : "fallback_custom",
+        });
+        setPaywallOpen(true);
+      })();
+    },
+    [refreshEntitlements],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -202,12 +236,14 @@ export function PremiumProvider({ children }: PropsWithChildren) {
     closePaywall();
   }, [closePaywall]);
 
-  const restorePurchases = useCallback(async () => {
+  const restorePurchases = useCallback(async (): Promise<boolean> => {
     await configureRevenueCatBootstrap();
-    if (!isPurchasesConfigured()) return;
+    if (!isPurchasesConfigured()) return false;
     await restorePurchasesNative();
-    await applyCustomerInfo(false);
-  }, [applyCustomerInfo]);
+    await refreshEntitlements();
+    const info = await fetchCustomerInfoSafe();
+    return premiumActiveFromCustomerInfo(info);
+  }, [refreshEntitlements]);
 
   const assertPremiumOrPaywall = useCallback(
     (reason: PremiumGateReason): boolean => {
@@ -264,15 +300,19 @@ export function PremiumProvider({ children }: PropsWithChildren) {
   const purchasesAvailable =
     Platform.OS === "ios" && isRevenueCatAvailable();
 
+  const loading = purchasesAvailable && !isHydrated;
+
   const value = useMemo<PremiumContextValue>(
     () => ({
       isPremium,
       isHydrated,
+      loading,
       purchasesAvailable,
       freeAiGenerationsUsed: freeUsed,
       openPaywall,
       closePaywall,
       refreshEntitlements,
+      refreshPremiumStatus: refreshEntitlements,
       restorePurchases,
       assertAiGenerationAllowed,
       recordSuccessfulAiGeneration,
@@ -281,6 +321,7 @@ export function PremiumProvider({ children }: PropsWithChildren) {
     [
       isPremium,
       isHydrated,
+      loading,
       purchasesAvailable,
       freeUsed,
       openPaywall,

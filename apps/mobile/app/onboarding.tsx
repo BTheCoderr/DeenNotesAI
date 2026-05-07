@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { useEffect, useState } from "react";
 import {
   LayoutAnimation,
@@ -40,6 +41,7 @@ import {
 
 import { writeMobileQuranPrefs } from "../src/lib/mobile-quran-prefs";
 import { logProductEvent } from "../src/lib/analytics/mobile-product-events";
+import { getLegalPrivacyUrl, getLegalTermsUrl } from "../src/lib/purchases/expo-extra";
 import { setPaywallTriggerAfterOnboarding } from "../src/lib/purchases/premium-storage";
 const DONE_KEY = "deennotes.mobile.onboarding.v1";
 const ANSWERS_KEY = "deennotes.mobile.onboarding.answers.v1";
@@ -222,6 +224,27 @@ export default function OnboardingScreen() {
             </Pressable>
           )}
         </View>
+
+        <View style={styles.legalSticky}>
+          <Text style={styles.legalMuted} accessibilityRole="text">
+            {"DeenNotes — "}
+            <Text
+              accessibilityRole="link"
+              style={styles.legalLink}
+              onPress={() => void Linking.openURL(getLegalTermsUrl()).catch(() => {})}
+            >
+              Terms
+            </Text>
+            <Text style={styles.legalMuted}> · </Text>
+            <Text
+              accessibilityRole="link"
+              style={styles.legalLink}
+              onPress={() => void Linking.openURL(getLegalPrivacyUrl()).catch(() => {})}
+            >
+              Privacy
+            </Text>
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -339,4 +362,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryTxt: { color: ink, fontWeight: "700", fontSize: fontSizes.md },
+  legalSticky: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: border,
+    alignItems: "center",
+  },
+  legalMuted: {
+    fontSize: fontSizes.xs,
+    color: muted,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  legalLink: {
+    fontSize: fontSizes.xs,
+    color: emerald,
+    fontWeight: "800",
+    textDecorationLine: "underline",
+  },
 });

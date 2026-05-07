@@ -1,4 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -14,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { safeBack } from "../src/lib/navigation/safe-back";
+import { getLegalPrivacyUrl, getLegalTermsUrl } from "../src/lib/purchases/expo-extra";
 import { supabase } from "../src/lib/supabase";
 import {
   cardBg,
@@ -109,6 +111,28 @@ export default function LoginScreen() {
               </Pressable>
             </>
           )}
+          <View style={{ flex: 1 }} />
+          <View style={styles.legalFoot}>
+            <Text style={styles.legalMuted}>
+              By continuing you agree to our{" "}
+              <Text
+                accessibilityRole="link"
+                style={styles.legalLink}
+                onPress={() => void Linking.openURL(getLegalTermsUrl()).catch(() => {})}
+              >
+                Terms of Use
+              </Text>
+              {" "}and acknowledge the{" "}
+              <Text
+                accessibilityRole="link"
+                style={styles.legalLink}
+                onPress={() => void Linking.openURL(getLegalPrivacyUrl()).catch(() => {})}
+              >
+                Privacy Policy
+              </Text>
+              .
+            </Text>
+          </View>
           <Pressable onPress={() => safeBack(router, navigation, "/(tabs)")} style={styles.ghost}>
             <Text style={styles.ghostTxt}>Not now</Text>
           </Pressable>
@@ -151,4 +175,16 @@ const styles = StyleSheet.create({
   primaryTxt: { color: "#fff", fontWeight: "800", fontSize: fontSizes.md },
   ghost: { alignSelf: "flex-start", paddingVertical: spacing.sm },
   ghostTxt: { color: emerald, fontWeight: "700", fontSize: fontSizes.sm },
+  legalFoot: { paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  legalMuted: {
+    fontSize: 11,
+    color: muted,
+    lineHeight: 16,
+    textAlign: "center",
+  },
+  legalLink: {
+    color: emerald,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
 });

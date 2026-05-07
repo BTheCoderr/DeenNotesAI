@@ -7,16 +7,20 @@ import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { deleteAccountOnServer } from "../../src/api/deleteAccount";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
 import { usePremium } from "../../src/hooks/usePremium";
+import { clearAllLocalPersistedAppData } from "../../src/lib/account/clear-local-user-state";
 import { logoutRevenueCatIfConfigured } from "../../src/lib/purchases/revenuecat-bootstrap";
 import { supabase } from "../../src/lib/supabase";
 import {
@@ -36,6 +40,7 @@ import {
 type Ion = ComponentProps<typeof Ionicons>["name"];
 
 const ONBOARDING_KEY = "deennotes.mobile.onboarding.v1";
+const DELETE_CONFIRM_PHRASE = "DELETE";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -89,10 +94,13 @@ export default function SettingsIndexScreen() {
     isPremium,
     purchasesAvailable,
     restorePurchases,
-    refreshEntitlements,
+    refreshPremiumStatus,
   } = usePremium();
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTyping, setDeleteTyping] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   async function replayOnboarding() {
     await AsyncStorage.removeItem(ONBOARDING_KEY);
@@ -110,6 +118,32 @@ export default function SettingsIndexScreen() {
     }
   }
 
+  async function runAccountDeletion() {
+    if (!supabase || !auth.accessToken) {
+      Alert.alert("Not signed in", "Sign in again, then delete your account if you still want to.");
+      return;
+    }
+    if (deleteTyping.trim() !== DELETE_CONFIRM_PHRASE) return;
+
+    setDeletingAccount(true);
+    try {
+      await deleteAccountOnServer(auth.accessToken);
+      await logoutRevenueCatIfConfigured();
+      await refreshPremiumStatus();
+      await supabase.auth.signOut();
+      await clearAllLocalPersistedAppData();
+      setDeleteOpen(false);
+      setDeleteTyping("");
+      Alert.alert("Account deleted", "Your DeenNotes account and synced server data have been removed.", [
+        { text: "OK", onPress: () => router.replace("/login") },
+      ]);
+    } catch (e) {
+      Alert.alert("Could not delete account", e instanceof Error ? e.message : "Try again when you have a connection.");
+    } finally {
+      setDeletingAccount(false);
+    }
+  }
+
   async function onRestorePurchases() {
     if (!purchasesAvailable) {
       Alert.alert(
@@ -120,9 +154,18 @@ export default function SettingsIndexScreen() {
     }
     setRestoring(true);
     try {
-      await restorePurchases();
-      await refreshEntitlements();
-      Alert.alert("Purchases refreshed", "We checked App Store receipts for DeenNotes Plus.");
+      const active = await restorePurchases();
+      if (active) {
+        Alert.alert(
+          "DeenNotes Plus is active",
+          "Your subscription was restored. Thank you for supporting calmer Quran, prayer, and reflection.",
+        );
+      } else {
+        Alert.alert(
+          "No active subscription found",
+          "We didn’t find an active DeenNotes Plus entitlement on this Apple ID for this device. If you subscribed with a different Apple ID or the purchase is pending, sign in correctly or wait a moment and try again.",
+        );
+      }
     } catch (e) {
       Alert.alert(
         "Couldn’t restore",
@@ -256,6 +299,20 @@ export default function SettingsIndexScreen() {
               {busy ? <ActivityIndicator color={emerald} /> : <Text style={styles.signOutTxt}>Sign out</Text>}
             </Pressable>
           ) : null}
+          {signedIn ? (
+            <Pressable
+              style={styles.deleteHint}
+              onPress={() => setDeleteOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+            >
+              <Text style={styles.deleteHintTxt}>Delete account</Text>
+              <Text style={styles.deleteHintSub}>
+                Permanently removes your profile, synced reflections, and sign-in. Local device data is wiped. Apple
+                subscriptions are managed separately in Settings → Apple ID → Subscriptions.
+              </Text>
+            </Pressable>
+          ) : null}
         </Section>
 
         <Section title="Worship">
@@ -323,6 +380,73 @@ export default function SettingsIndexScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <Modal
+        visible={deleteOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deletingAccount) {
+            setDeleteOpen(false);
+            setDeleteTyping("");
+          }
+        }}
+      >
+        <View style={styles.deleteModalScrim}>
+          <View style={styles.deleteModalCard}>
+            <Text style={styles.deleteModalTitle}>Delete your account?</Text>
+            <Text style={styles.deleteModalBody}>
+              This removes your DeenNotes profile, saved share cards, onboarding profile, and synced reflections from
+              our servers. Local data on this phone is cleared. This cannot be undone.
+            </Text>
+            <Text style={styles.deleteModalBodySmall}>
+              Active Apple subscriptions remain with Apple until you cancel in Settings → Apple ID → Subscriptions.
+            </Text>
+            <Text style={styles.deleteTypeK}>Type DELETE to confirm</Text>
+            <TextInput
+              style={styles.deleteInput}
+              placeholder="DELETE"
+              placeholderTextColor={muted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              value={deleteTyping}
+              editable={!deletingAccount}
+              onChangeText={setDeleteTyping}
+              accessibilityLabel="Type DELETE to confirm account deletion"
+            />
+            <View style={styles.deleteModalRow}>
+              <Pressable
+                style={[styles.deleteCancelBtn, deletingAccount && styles.deleteBtnDisabled]}
+                onPress={() => {
+                  if (!deletingAccount) {
+                    setDeleteOpen(false);
+                    setDeleteTyping("");
+                  }
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.deleteCancelTxt}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.deleteDangerBtn,
+                  (deletingAccount || deleteTyping.trim() !== DELETE_CONFIRM_PHRASE) &&
+                    styles.deleteBtnDisabled,
+                ]}
+                onPress={() => void runAccountDeletion()}
+                disabled={deletingAccount || deleteTyping.trim() !== DELETE_CONFIRM_PHRASE}
+                accessibilityRole="button"
+              >
+                {deletingAccount ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.deleteDangerTxt}>Delete permanently</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -421,6 +545,68 @@ const styles = StyleSheet.create({
   },
   signOutDisabled: { opacity: 0.6 },
   signOutTxt: { fontWeight: "800", fontSize: fontSizes.md, color: ink },
+
+  deleteHint: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: border,
+  },
+  deleteHintTxt: { fontWeight: "800", fontSize: fontSizes.sm, color: "#b45309" },
+  deleteHintSub: { fontSize: fontSizes.xs, color: muted, lineHeight: 18, marginTop: 4 },
+
+  deleteModalScrim: {
+    flex: 1,
+    backgroundColor: "rgba(28,25,23,0.45)",
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  deleteModalCard: {
+    backgroundColor: cardBg,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: border,
+  },
+  deleteModalTitle: { fontFamily: fontSerifHeading, fontSize: fontSizes.xl, fontWeight: "600", color: ink },
+  deleteModalBody: { fontSize: fontSizes.sm, color: muted, lineHeight: 22 },
+  deleteModalBodySmall: { fontSize: fontSizes.xs, color: muted, lineHeight: 18 },
+  deleteTypeK: { fontSize: fontSizes.xs, fontWeight: "800", color: ink, marginTop: spacing.sm },
+  deleteInput: {
+    borderWidth: 1,
+    borderColor: border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSizes.md,
+    color: ink,
+    fontWeight: "700",
+    backgroundColor: stone,
+    marginTop: spacing.xs,
+  },
+  deleteModalRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  deleteCancelBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: border,
+    backgroundColor: stone,
+  },
+  deleteCancelTxt: { fontWeight: "800", color: ink, fontSize: fontSizes.sm },
+  deleteDangerBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    borderRadius: radii.pill,
+    backgroundColor: "#b91c1c",
+  },
+  deleteDangerTxt: { fontWeight: "800", color: "#fff", fontSize: fontSizes.sm },
+  deleteBtnDisabled: { opacity: 0.45 },
 
   footerLink: { alignSelf: "center", paddingVertical: spacing.lg },
   footerLinkTxt: { fontWeight: "800", color: emerald, fontSize: fontSizes.sm },

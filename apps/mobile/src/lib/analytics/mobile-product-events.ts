@@ -12,6 +12,7 @@ export type ProductEventName =
   | "first_reflection_saved"
   | "paywall_shown"
   | "paywall_dismissed"
+  | "paywall_rc_outcome"
   | "purchase_attempt"
   | "purchase_success"
   | "purchase_failed"

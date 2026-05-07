@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 
 /**
- * Production: set `EXPO_PUBLIC_NEXT_ORIGIN` (e.g. https://deennotes.example.com) in EAS env.
+ * Production: set `EXPO_PUBLIC_NEXT_ORIGIN` to your deployed Next.js URL (for example https://deennotesai.netlify.app) in EAS env.
  * Dev: defaults to Metro host for local Next — override if API runs elsewhere.
  */
 

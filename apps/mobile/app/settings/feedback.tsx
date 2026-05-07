@@ -1,10 +1,11 @@
 import { Linking, Pressable, StyleSheet, Text } from "react-native";
 
 import { P, SettingsDocScreen } from "../../src/components/settings/SettingsDocScreen";
+import { LEGAL_CONTACT_URL } from "../../src/lib/legal-urls";
 import { emerald, fontSizes, spacing } from "../../src/theme";
 
 export default function SettingsFeedbackScreen() {
-  const contact = () => void Linking.openURL("https://deennotesai.netlify.app/contact").catch(() => {});
+  const contact = () => void Linking.openURL(LEGAL_CONTACT_URL).catch(() => {});
 
   return (
     <SettingsDocScreen title="Feedback">

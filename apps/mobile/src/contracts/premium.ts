@@ -2,8 +2,8 @@
  * Monetization identifiers — match RevenueCat + App Store Connect (iOS primary).
  */
 
-/** RevenueCat entitlement id (mirror in RevenueCat dashboard). */
-export const REVENUECAT_PREMIUM_ENTITLEMENT_FALLBACK = "premium";
+/** RevenueCat entitlement id (mirror in RevenueCat dashboard — default when env unset). */
+export const REVENUECAT_PREMIUM_ENTITLEMENT_FALLBACK = "DeenNotes AI Pro";
 
 /** App Store product identifiers. */
 export const PRODUCT_MONTHLY_DEENNOTES = "deennotes.monthly";
