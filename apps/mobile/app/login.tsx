@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { safeBack } from "../src/lib/navigation/safe-back";
+import { COPY_ACCOUNT_SYNC_UNAVAILABLE } from "../src/contracts/review-user-copy";
 import { getLegalPrivacyUrl, getLegalTermsUrl } from "../src/lib/purchases/expo-extra";
 import { supabase } from "../src/lib/supabase";
 import {
@@ -40,7 +41,7 @@ export default function LoginScreen() {
   async function onSubmit() {
     setErr(null);
     if (!supabase) {
-      setErr("Supabase is not configured in this build.");
+      setErr(COPY_ACCOUNT_SYNC_UNAVAILABLE);
       return;
     }
     const e = email.trim();
@@ -73,7 +74,7 @@ export default function LoginScreen() {
           <Text style={styles.lead}>Use your DeenNotes account to sync reflections with the web.</Text>
 
           {!supabase ? (
-            <Text style={styles.err}>Missing EXPO_PUBLIC_SUPABASE_URL / ANON KEY.</Text>
+            <Text style={styles.err}>{COPY_ACCOUNT_SYNC_UNAVAILABLE}</Text>
           ) : (
             <>
               <TextInput

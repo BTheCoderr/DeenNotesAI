@@ -2,6 +2,8 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { usePrayerToday } from "../../src/api/hooks/usePrayerToday";
+import { NextPrayerCard } from "../../src/components/prayer/NextPrayerCard";
 import {
   bronze,
   cardBg,
@@ -17,7 +19,9 @@ import {
 
 export default function PrayerSettingsHubScreen() {
   const router = useRouter();
+  const { data, error, isLoading } = usePrayerToday();
 
+  const payload = data && "ok" in data && data.ok ? data : null;
   return (
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
       <View style={styles.pad}>
@@ -29,6 +33,13 @@ export default function PrayerSettingsHubScreen() {
         <Pressable style={styles.primary} onPress={() => router.push("/(tabs)/prayer")}>
           <Text style={styles.primaryTxt}>Open Prayer</Text>
         </Pressable>
+
+        <NextPrayerCard
+          data={payload}
+          loading={isLoading}
+          error={error}
+          onManageReminders={() => router.push("/(tabs)/prayer")}
+        />
         <Text style={styles.hint}>Tip: Open the Prayer tab, then choose Preferences for methods, reminders, and location.</Text>
 
         <View style={styles.card}>

@@ -15,10 +15,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDeenNotesList } from "../../src/api/hooks/useDeenNotes";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { SkeletonReflectList } from "../../src/components/skeleton/CalmSkeleton";
+import { SettingsGearButton } from "../../src/components/settings/SettingsGearButton";
 import { labelForNoteType } from "../../src/contracts/note-types";
 import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
 import { usePremium } from "../../src/hooks/usePremium";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import {
   readReflectionLibrary,
   type ReflectionLibraryItem,
@@ -74,9 +76,10 @@ function mapCloudToLibrary(
 function ReflectScreenInner() {
   const router = useRouter();
   const auth = useMobileSession();
-  const { isPremium, purchasesAvailable, isHydrated, openPaywall } = usePremium();
+  const { isHydrated, openPaywall, purchasesAvailable, assertPremiumOrPaywall } = usePremium();
+  const { canUseReflectionMemory } = usePremiumFeatureFlags();
   const hasSignedIn = Boolean(auth.ready && auth.accessToken);
-  const cloudLibraryUnlocked = !purchasesAvailable || isPremium;
+  const cloudLibraryUnlocked = canUseReflectionMemory;
 
   const listQuery = useDeenNotesList(hasSignedIn && cloudLibraryUnlocked);
   const [localRows, setLocalRows] = useState<ReflectionLibraryItem[]>([]);
@@ -128,48 +131,125 @@ function ReflectScreenInner() {
     localRows.length === 0 &&
     !listQuery.isError;
 
+  function onRecordKhutbah() {
+    if (!isHydrated) return;
+    if (!assertPremiumOrPaywall("khutbah_recording")) return;
+    router.push("/recording/session");
+  }
+
+  const showPlusLibraryBanner =
+    hasSignedIn && purchasesAvailable && isHydrated && !canUseReflectionMemory;
+
+  const listHeader =
+    merged.length > 0 ? (
+      <View style={styles.recentBlock}>
+        <Text style={styles.sectionLabel}>Recent</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.recentRow}
+        >
+          {recent.map((item) => (
+            <Pressable
+              key={`r-${item.id}`}
+              style={styles.recentCard}
+              onPress={() => router.push(`/notes/${item.id}`)}
+            >
+              <Ionicons name="journal-outline" size={18} color={emerald} style={styles.cardIconTop} />
+              <Text style={styles.typePill}>
+                {item.note_type ? labelForNoteType(item.note_type) : "Reflection"}
+              </Text>
+              <Text style={styles.recentTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.recentReminder} numberOfLines={2}>
+                {item.main_reminder ?? item.short_summary ?? " "}
+              </Text>
+              <Text style={styles.recentMeta}>{formatDate(item.created_at)}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        <Text style={[styles.sectionLabel, styles.libraryLabel]}>All reflections</Text>
+      </View>
+    ) : null;
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <View style={styles.topRow}>
         <Text style={styles.h1}>Reflect</Text>
-        <Pressable
-          onPress={() => router.push(SETTINGS_PROFILE_ROUTE)}
-          style={styles.settingsIconBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Open settings"
-          hitSlop={8}
-        >
-          <Ionicons name="settings-outline" size={24} color={emerald} />
-        </Pressable>
+        <SettingsGearButton href={SETTINGS_PROFILE_ROUTE} />
       </View>
-      <Text style={styles.sub}>
-        {hasSignedIn
-          ? cloudLibraryUnlocked
-            ? "Reflections from your account — same notes as the web app."
-            : "On-device reflections stay with you. DeenNotes Plus mirrors your full signed-in library here."
-          : "Signed-out view shows on-device placeholders. Sign in from Settings to load your library."}
-      </Text>
+      <Text style={styles.tagline}>Capture what moved you, then return to it with clarity.</Text>
+      {!hasSignedIn ? (
+        <Text style={styles.signInHint}>Sign in from Settings to sync reflections across visits.</Text>
+      ) : !cloudLibraryUnlocked ? (
+        <Text style={styles.signInHint}>
+          On-device reflections stay with you. DeenNotes Plus mirrors your full signed-in library here.
+        </Text>
+      ) : (
+        <Text style={styles.signInHint}>Your recent notes from this account appear below.</Text>
+      )}
 
-      {hasSignedIn && purchasesAvailable && isHydrated && !isPremium ? (
+      {showPlusLibraryBanner ? (
         <Pressable
           onPress={() => openPaywall("reflect_cloud_sync")}
           style={styles.syncBanner}
           accessibilityRole="button"
         >
-          <Text style={styles.syncBannerTitle}>Cloud library on this tab</Text>
+          <Text style={styles.syncBannerTitle}>Keep your full library in one place</Text>
           <Text style={styles.syncBannerBody}>
-            Tap to learn about DeenNotes Plus — full history sync across calm visits.
+            DeenNotes Plus syncs your reflections calmly across visits — tap to learn more when you&apos;re ready.
           </Text>
         </Pressable>
       ) : null}
 
       <Pressable
-        style={styles.newBtn}
+        style={styles.heroPrimary}
         onPress={() => router.push("/new-sheet")}
         accessibilityRole="button"
       >
-        <Text style={styles.newBtnTxt}>New reflection</Text>
+        <Ionicons name="add-circle-outline" size={26} color="#fff" />
+        <View style={styles.heroPrimaryTxt}>
+          <Text style={styles.heroPrimaryTitle}>New reflection</Text>
+          <Text style={styles.heroPrimarySub}>Capture a thought, verse, or reminder in your voice.</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.9)" />
       </Pressable>
+
+      <View style={styles.secondaryRow}>
+        <Pressable
+          style={styles.secondaryBtn}
+          onPress={onRecordKhutbah}
+          accessibilityRole="button"
+          accessibilityLabel="Record khutbah"
+        >
+          <Ionicons name="mic-outline" size={22} color={emerald} />
+          <Text style={styles.secondaryBtnTxt}>Record khutbah</Text>
+        </Pressable>
+        <Pressable
+          style={styles.secondaryBtn}
+          onPress={() => router.push("/new-sheet")}
+          accessibilityRole="button"
+          accessibilityLabel="Choose a capture mode"
+        >
+          <Ionicons name="grid-outline" size={22} color={emerald} />
+          <Text style={styles.secondaryBtnTxt}>Capture modes</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.promoCard}>
+        <Text style={styles.promoKicker}>Never lose a reflection</Text>
+        <Text style={styles.promoBody}>
+          Save thoughts, khutbah notes, and Qur&apos;an reflections in one calm place — unhurried, private-first.
+        </Text>
+        <Pressable
+          style={styles.promoCta}
+          onPress={() => router.push("/new-sheet")}
+          accessibilityRole="button"
+        >
+          <Text style={styles.promoCtaTxt}>Start reflecting</Text>
+        </Pressable>
+      </View>
 
       {showInitialCloudLoad ? (
         <View style={styles.loadingBox} accessibilityRole="progressbar">
@@ -178,6 +258,7 @@ function ReflectScreenInner() {
         </View>
       ) : (
         <FlatList
+          style={styles.listFlex}
           data={merged}
           keyExtractor={(item) => item.id}
           accessibilityLabel="Reflection list"
@@ -188,46 +269,14 @@ function ReflectScreenInner() {
               tintColor={emerald}
             />
           }
-          ListHeaderComponent={
-            merged.length > 0 ? (
-              <View style={styles.recentBlock}>
-                <Text style={styles.sectionLabel}>Recent</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.recentRow}
-                >
-                  {recent.map((item) => (
-                    <Pressable
-                      key={`r-${item.id}`}
-                      style={styles.recentCard}
-                      onPress={() => router.push(`/notes/${item.id}`)}
-                    >
-                      <Text style={styles.typePill}>
-                        {item.note_type ? labelForNoteType(item.note_type) : "Reflection"}
-                      </Text>
-                      <Text style={styles.recentTitle} numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.recentReminder} numberOfLines={2}>
-                        {item.main_reminder ?? item.short_summary ?? " "}
-                      </Text>
-                      <Text style={styles.recentMeta}>{formatDate(item.created_at)}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-                <Text style={[styles.sectionLabel, styles.libraryLabel]}>All reflections</Text>
-              </View>
-            ) : null
-          }
+          ListHeaderComponent={listHeader}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>
+              <Ionicons name="leaf-outline" size={32} color={emerald} style={{ marginBottom: spacing.xs }} />
               <Text style={styles.emptyTitle}>A quiet shelf for now</Text>
               <Text style={styles.muted}>
-                {hasSignedIn
-                  ? "Tap New reflection to capture something sincere — entries stay here whenever you return."
-                  : "Sign in once to mirror notes from your account. Until then this list stays softly empty."}
+                Start with a thought, a verse, a khutbah, or a moment you want to remember.
               </Text>
               <Pressable
                 style={styles.cta}
@@ -250,17 +299,22 @@ function ReflectScreenInner() {
               accessibilityRole="button"
               accessibilityLabel={item.title}
             >
-              <Text style={styles.cardType}>
-                {item.note_type ? labelForNoteType(item.note_type) : "Reflection"}
-              </Text>
+              <View style={styles.cardTopRow}>
+                <Ionicons name="document-text-outline" size={20} color={emerald} />
+                <Text style={styles.cardType}>
+                  {item.note_type ? labelForNoteType(item.note_type) : "Reflection"}
+                </Text>
+              </View>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardReminder} numberOfLines={2}>
                 {item.main_reminder ?? item.short_summary ?? " "}
               </Text>
-              <Text style={styles.cardMeta}>{formatDate(item.created_at)}</Text>
-              <Text style={styles.cardSrc}>
-                {item.source === "local" ? "On device" : "Cloud"}
-              </Text>
+              <View style={styles.cardFoot}>
+                <Text style={styles.cardMeta}>{formatDate(item.created_at)}</Text>
+                <Text style={styles.cardSrc}>
+                  {item.source === "local" ? "On device" : "Cloud"}
+                </Text>
+              </View>
             </Pressable>
           )}
         />
@@ -285,13 +339,13 @@ export default function ReflectScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: stone, paddingHorizontal: spacing.xl },
+  listFlex: { flex: 1 },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.md,
   },
-  settingsIconBtn: { padding: 4 },
   loadingBox: {
     flex: 1,
     justifyContent: "center",
@@ -312,9 +366,16 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "600",
     color: ink,
-    marginBottom: spacing.xs,
+    flex: 1,
   },
-  sub: { fontSize: fontSizes.sm, color: muted, marginBottom: spacing.md, lineHeight: 20 },
+  tagline: {
+    fontSize: fontSizes.sm,
+    color: ink,
+    marginBottom: spacing.xs,
+    lineHeight: 22,
+    fontWeight: "600",
+  },
+  signInHint: { fontSize: fontSizes.sm, color: muted, marginBottom: spacing.md, lineHeight: 20 },
   syncBanner: {
     alignSelf: "stretch",
     borderRadius: radii.lg,
@@ -327,17 +388,75 @@ const styles = StyleSheet.create({
   },
   syncBannerTitle: { fontSize: fontSizes.sm, fontWeight: "800", color: emerald },
   syncBannerBody: { fontSize: fontSizes.xs, color: muted, lineHeight: 18 },
-  newBtn: {
+  heroPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    alignSelf: "stretch",
+    backgroundColor: emerald,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(18,122,99,0.45)",
+  },
+  heroPrimaryTxt: { flex: 1, gap: 4 },
+  heroPrimaryTitle: { color: "#fff", fontWeight: "800", fontSize: fontSizes.lg, fontFamily: fontSerifHeading },
+  heroPrimarySub: { color: "rgba(255,255,255,0.92)", fontSize: fontSizes.sm, lineHeight: 20 },
+  secondaryRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  secondaryBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: border,
+    backgroundColor: cardBg,
+    minHeight: 52,
+  },
+  secondaryBtnTxt: {
+    fontSize: fontSizes.sm,
+    fontWeight: "700",
+    color: ink,
+    textAlign: "center",
+    flexShrink: 1,
+  },
+  promoCard: {
+    alignSelf: "stretch",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: border,
+    backgroundColor: cardBg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  promoKicker: {
+    fontFamily: fontSerifHeading,
+    fontSize: fontSizes.lg,
+    fontWeight: "600",
+    color: ink,
+  },
+  promoBody: { fontSize: fontSizes.sm, color: muted, lineHeight: 22 },
+  promoCta: {
     alignSelf: "flex-start",
     backgroundColor: emerald,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
+    paddingVertical: spacing.md,
     borderRadius: radii.pill,
     minHeight: 48,
     justifyContent: "center",
-    marginBottom: spacing.lg,
   },
-  newBtnTxt: { color: "#fff", fontWeight: "800", fontSize: fontSizes.md },
+  promoCtaTxt: { color: "#fff", fontWeight: "800", fontSize: fontSizes.md },
   recentBlock: { marginBottom: spacing.md },
   sectionLabel: {
     fontSize: fontSizes.xs,
@@ -350,19 +469,20 @@ const styles = StyleSheet.create({
   libraryLabel: { marginTop: spacing.lg },
   recentRow: { gap: spacing.sm, paddingBottom: spacing.xs },
   recentCard: {
-    width: 220,
+    width: 228,
     padding: spacing.md,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: border,
     backgroundColor: cardBg,
-    gap: 4,
+    gap: 6,
   },
+  cardIconTop: { marginBottom: 2 },
   typePill: { fontSize: 10, fontWeight: "800", color: bronze, textTransform: "uppercase" },
-  recentTitle: { fontSize: fontSizes.md, fontWeight: "700", color: ink },
+  recentTitle: { fontSize: fontSizes.md, fontWeight: "700", color: ink, fontFamily: fontSerifHeading },
   recentReminder: { fontSize: fontSizes.sm, color: muted, lineHeight: 18 },
   recentMeta: { fontSize: fontSizes.xs, color: bronze, marginTop: spacing.xs },
-  list: { paddingBottom: 120, flexGrow: 1 },
+  list: { paddingBottom: 120, flexGrow: 1, gap: spacing.xs },
   empty: {
     padding: spacing.xl,
     borderRadius: radii.lg,
@@ -370,43 +490,51 @@ const styles = StyleSheet.create({
     borderColor: border,
     backgroundColor: cardBg,
     gap: spacing.md,
+    alignItems: "flex-start",
   },
   emptyTitle: {
     fontFamily: fontSerifHeading,
-    fontSize: fontSizes.lg,
+    fontSize: fontSizes.xl,
     fontWeight: "600",
     color: ink,
   },
-  muted: { fontSize: fontSizes.sm, color: muted, lineHeight: 20 },
+  muted: { fontSize: fontSizes.sm, color: muted, lineHeight: 22 },
   cta: {
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
     backgroundColor: emerald,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
     minHeight: 52,
     justifyContent: "center",
+    alignItems: "center",
   },
   ctaTxt: { color: "#fff", fontWeight: "800", fontSize: fontSizes.md },
   ctaSecondary: { alignSelf: "flex-start", paddingVertical: spacing.sm },
   ctaSecondaryTxt: { color: emerald, fontWeight: "800", fontSize: fontSizes.md },
   card: {
     padding: spacing.md,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: border,
     backgroundColor: cardBg,
     marginBottom: spacing.sm,
-    gap: 4,
+    gap: 6,
   },
+  cardTopRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   cardType: { fontSize: 10, fontWeight: "800", color: bronze, textTransform: "uppercase" },
-  cardTitle: { fontSize: fontSizes.md, fontWeight: "800", color: ink },
+  cardTitle: { fontSize: fontSizes.md, fontWeight: "800", color: ink, fontFamily: fontSerifHeading },
   cardReminder: { fontSize: fontSizes.sm, color: muted, lineHeight: 18 },
+  cardFoot: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
   cardMeta: {
     fontSize: fontSizes.xs,
     color: bronze,
     fontVariant: ["tabular-nums"],
-    marginTop: 4,
   },
   cardSrc: { fontSize: 10, color: muted, letterSpacing: 0.3 },
 });

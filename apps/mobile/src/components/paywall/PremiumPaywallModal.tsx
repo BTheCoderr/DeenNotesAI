@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -20,6 +20,13 @@ import {
   PRODUCT_YEARLY_DEENNOTES,
   type PremiumGateReason,
 } from "../../contracts/premium";
+import { DeenNotesAppIconMark } from "../brand/DeenNotesAppIconMark";
+import {
+  COPY_PURCHASE_INCOMPLETE,
+  COPY_RESTORE_INCOMPLETE,
+  COPY_SUBSCRIPTIONS_CATALOG_RETRY,
+  COPY_SUBSCRIPTIONS_UNAVAILABLE,
+} from "../../contracts/review-user-copy";
 import {
   logProductEvent,
   logTrialSignalsFromCustomerInfo,
@@ -29,6 +36,9 @@ import {
   premiumActiveFromCustomerInfo,
   purchasePackage,
   restorePurchasesNative,
+  configureRevenueCatBootstrap,
+  isPurchasesConfigured,
+  isRevenueCatAvailable,
 } from "../../lib/purchases/revenuecat-bootstrap";
 import {
   border,
@@ -127,54 +137,75 @@ export function PremiumPaywallModal({
   const [err, setErr] = useState<string | null>(null);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
   const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
+  const [catalogState, setCatalogState] = useState<
+    "idle" | "loading" | "no_iap" | "sdk_unready" | "offerings_error" | "offerings_empty" | "ready"
+  >("idle");
+  const [offeringsBusy, setOfferingsBusy] = useState(false);
 
   function finalize(kind: PaywallOutcome) {
     onOutcome(kind);
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setErr(null);
-      if (!visible) return;
-      try {
-        const offers = await Purchases.getOfferings();
-        const current = offers.current;
-        const pkgs = current?.availablePackages ?? [];
+  const reloadOfferings = useCallback(async () => {
+    setErr(null);
+    setOfferingsBusy(true);
+    setCatalogState("loading");
+    setAnnualPkg(null);
+    setMonthlyPkg(null);
 
-        const annual =
-          current?.annual ??
-          pkgs.find((p) => (p.product?.identifier ?? "") === PRODUCT_YEARLY_DEENNOTES) ??
-          pkgs.find((p) => p.identifier === PRODUCT_YEARLY_DEENNOTES) ??
-          pkgs.find((p) => p.packageType === PACKAGE_TYPE.ANNUAL) ??
-          null;
-
-        const monthly =
-          current?.monthly ??
-          pkgs.find((p) => (p.product?.identifier ?? "") === PRODUCT_MONTHLY_DEENNOTES) ??
-          pkgs.find((p) => p.identifier === PRODUCT_MONTHLY_DEENNOTES) ??
-          pkgs.find((p) => p.packageType === PACKAGE_TYPE.MONTHLY) ??
-          null;
-
-        if (cancelled) return;
-        setAnnualPkg(annual);
-        setMonthlyPkg(monthly);
-      } catch (e: unknown) {
-        const msg =
-          typeof (e as { userCancelled?: boolean })?.userCancelled === "boolean" &&
-          (e as { userCancelled?: boolean }).userCancelled
-            ? null
-            : e instanceof Error
-              ? e.message
-              : "Store catalog is waking up.";
-        if (!cancelled) setErr(msg ?? "Could not refresh offerings gently.");
-      }
+    if (!isRevenueCatAvailable()) {
+      setCatalogState("no_iap");
+      setOfferingsBusy(false);
+      return;
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [visible]);
+
+    await configureRevenueCatBootstrap();
+    if (!isPurchasesConfigured()) {
+      setCatalogState("sdk_unready");
+      setOfferingsBusy(false);
+      return;
+    }
+
+    try {
+      const offers = await Purchases.getOfferings();
+      const current = offers.current;
+      const pkgs = current?.availablePackages ?? [];
+
+      const annual =
+        current?.annual ??
+        pkgs.find((p) => (p.product?.identifier ?? "") === PRODUCT_YEARLY_DEENNOTES) ??
+        pkgs.find((p) => p.identifier === PRODUCT_YEARLY_DEENNOTES) ??
+        pkgs.find((p) => p.packageType === PACKAGE_TYPE.ANNUAL) ??
+        null;
+
+      const monthly =
+        current?.monthly ??
+        pkgs.find((p) => (p.product?.identifier ?? "") === PRODUCT_MONTHLY_DEENNOTES) ??
+        pkgs.find((p) => p.identifier === PRODUCT_MONTHLY_DEENNOTES) ??
+        pkgs.find((p) => p.packageType === PACKAGE_TYPE.MONTHLY) ??
+        null;
+
+      setAnnualPkg(annual);
+      setMonthlyPkg(monthly);
+      if (!annual && !monthly) {
+        setCatalogState("offerings_empty");
+      } else {
+        setCatalogState("ready");
+      }
+    } catch {
+      setCatalogState("offerings_error");
+    } finally {
+      setOfferingsBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      setCatalogState("idle");
+      return;
+    }
+    void reloadOfferings();
+  }, [visible, reloadOfferings]);
 
   async function onBuyAnnual(e: GestureResponderEvent) {
     e.stopPropagation();
@@ -193,7 +224,7 @@ export function PremiumPaywallModal({
       if (u?.userCancelled) logProductEvent("purchase_failed", { plan: "annual", cancelled: true });
       else {
         logProductEvent("purchase_failed", { plan: "annual", cancelled: false });
-        setErr(e instanceof Error ? e.message : "Purchase did not finish.");
+        setErr(COPY_PURCHASE_INCOMPLETE);
       }
     } finally {
       setBusy(null);
@@ -217,7 +248,7 @@ export function PremiumPaywallModal({
       if (u?.userCancelled) logProductEvent("purchase_failed", { plan: "monthly", cancelled: true });
       else {
         logProductEvent("purchase_failed", { plan: "monthly", cancelled: false });
-        setErr(e instanceof Error ? e.message : "Purchase did not finish.");
+        setErr(COPY_PURCHASE_INCOMPLETE);
       }
     } finally {
       setBusy(null);
@@ -230,13 +261,17 @@ export function PremiumPaywallModal({
     logProductEvent("restore_attempt", {});
     try {
       const info = await restorePurchasesNative();
+      if (!info) {
+        setErr(COPY_SUBSCRIPTIONS_UNAVAILABLE);
+        return;
+      }
       logProductEvent("restore_success", { entitled: premiumActiveFromCustomerInfo(info) });
       logTrialSignalsFromCustomerInfo(info, null);
       await onPurchaseSuccess?.();
       finalize("restore_completed");
-    } catch (e) {
+    } catch {
       logProductEvent("restore_failed", {});
-      setErr(e instanceof Error ? e.message : "Restore paused — try once you have connectivity.");
+      setErr(COPY_RESTORE_INCOMPLETE);
     } finally {
       setBusy(null);
     }
@@ -248,8 +283,11 @@ export function PremiumPaywallModal({
     <Modal animationType="slide" visible={visible} presentationStyle="pageSheet" onRequestClose={closeUser}>
       <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
         <View style={styles.header}>
+        <View style={styles.headerBrand}>
+          <DeenNotesAppIconMark size={44} />
           <Text style={styles.brandEyebrow}>DeenNotes Plus</Text>
-          <Pressable onPress={closeUser} hitSlop={12} accessibilityRole="button" accessibilityLabel="Dismiss">
+        </View>
+        <Pressable onPress={closeUser} hitSlop={12} accessibilityRole="button" accessibilityLabel="Dismiss">
             <Ionicons name="close-circle" size={minTouchTarget} color={muted} />
           </Pressable>
         </View>
@@ -262,12 +300,41 @@ export function PremiumPaywallModal({
             attaches may appear only at checkout — Apple controls eligibility and wording.
           </Text>
 
-          {!annualPkg && !monthlyPkg && visible ? (
-            <View style={[styles.offerCard, { borderStyle: "dashed" }]}>
-              {busy === null ? <ActivityIndicator color={emerald} /> : null}
+          {catalogState !== "ready" ? (
+            <View
+              style={[
+                styles.offerCard,
+                { borderStyle: "dashed", flexDirection: "column", gap: spacing.sm, alignItems: "stretch" },
+              ]}
+            >
+              {(offeringsBusy || catalogState === "loading") && !err ? (
+                <ActivityIndicator color={emerald} style={{ alignSelf: "center" }} />
+              ) : null}
               <Text style={[styles.offerErr, { textAlign: "center" }]}>
-                {err ? err : "Gathering stewardship plans…"}
+                {catalogState === "no_iap"
+                  ? COPY_SUBSCRIPTIONS_UNAVAILABLE
+                  : catalogState === "sdk_unready" ||
+                      catalogState === "offerings_error" ||
+                      catalogState === "offerings_empty"
+                    ? COPY_SUBSCRIPTIONS_CATALOG_RETRY
+                    : "Gathering stewardship plans…"}
               </Text>
+              {catalogState !== "loading" && catalogState !== "idle" && catalogState !== "no_iap" ? (
+                <Pressable
+                  style={[styles.secondaryBtn, offeringsBusy ? styles.secondaryDisabled : null]}
+                  disabled={offeringsBusy}
+                  onPress={() => void reloadOfferings()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading subscriptions"
+                >
+                  <Text style={styles.secondaryTxt}>{offeringsBusy ? "Reconnecting…" : "Try again"}</Text>
+                </Pressable>
+              ) : null}
+              {catalogState === "no_iap" ? (
+                <Pressable onPress={() => void Linking.openURL("https://apps.apple.com/account/subscriptions")}>
+                  <Text style={[styles.linkTxt, { textAlign: "center" }]}>Open Apple subscriptions</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : (
             <>
@@ -307,6 +374,12 @@ export function PremiumPaywallModal({
               ) : null}
             </>
           )}
+
+          {err ? (
+            <Text style={styles.paywallBannerErr} accessibilityRole="alert">
+              {err}
+            </Text>
+          ) : null}
 
           <View style={styles.legalBox}>
             <Text style={styles.legalHdr}>Subscription disclosures</Text>
@@ -392,6 +465,13 @@ const styles = StyleSheet.create({
     borderBottomColor: border,
     backgroundColor: stone,
   },
+  headerBrand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
   brandEyebrow: {
     fontSize: fontSizes.sm,
     fontWeight: "800",
@@ -408,6 +488,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   reason: { fontSize: fontSizes.sm, color: bronze, lineHeight: 22, fontWeight: "600" },
+  paywallBannerErr: {
+    textAlign: "center",
+    fontSize: fontSizes.sm,
+    color: ink,
+    fontWeight: "600",
+    lineHeight: 20,
+    paddingHorizontal: spacing.sm,
+  },
   lead: {
     fontSize: fontSizes.sm,
     color: muted,

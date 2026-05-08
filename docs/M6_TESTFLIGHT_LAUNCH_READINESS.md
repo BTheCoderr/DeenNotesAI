@@ -1,6 +1,10 @@
 # M6 — TestFlight, beta, and App Store prep
 
-Operational checklist plus **copy you can paste** into App Store Connect. **Screenshots**: capture manually from Simulator/device when UI matches the flows below — do not bundle synthetic images in the repo yet.
+Operational checklist plus **copy you can paste** into App Store Connect.
+
+**Screenshots:** use **TestFlight** or an **EAS production** standalone build on device/Simulator — **not Expo Go**. See **[MOBILE_EAS_LAUNCH.md](./MOBILE_EAS_LAUNCH.md)** and [`apps/mobile/LAUNCH.md`](../apps/mobile/LAUNCH.md) for Expo Go vs EAS, Metro `expo-platform` noise, and final QA commands.
+
+Do not bundle synthetic images in the repo yet.
 
 ---
 
@@ -177,7 +181,7 @@ cd .. && npm run lint && npm run build
 |-----|---------|
 | Apple Developer + ASC record | Ops |
 | Expo `eas init` | Link project ID |
-| EAS secrets: `EXPO_PUBLIC_NEXT_ORIGIN`, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, Sentry | Production env (Supabase baked in at **native build** time) |
+| EAS **production** env: Supabase (`EXPO_PUBLIC_SUPABASE_*`), **`EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`**, `EXPO_PUBLIC_NEXT_ORIGIN`, Sentry | Required for review; missing keys caused **Guideline 2.1** errors in build 1.0 (3) — [`MOBILE_EAS_LAUNCH.md`](./MOBILE_EAS_LAUNCH.md) **§6**; `app.config.ts` aborts **`production`** EAS builds if Supabase/RevenueCat keys absent |
 | Regenerate raster icons (`npm run mobile:icons`) before `eas build` | Home-screen + OTA update placeholder uses `apps/mobile/assets/icon.png` |
 | `EXPO_UPDATES_URL` | If using OTA |
 

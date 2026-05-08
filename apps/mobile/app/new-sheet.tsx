@@ -35,11 +35,11 @@ const ICON_BY_MODE: Record<NoteModeId, Ion> = {
 };
 
 /** Primary capture paths — polished sheet, same routes & gating as before. */
-const PRIMARY: ReadonlyArray<{
+const PRIMARY: readonly {
   modeId: NoteModeId;
   title: string;
   subtitle: string;
-}> = [
+}[] = [
   {
     modeId: "record_khutbah",
     title: "Record audio · Khutbah",

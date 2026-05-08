@@ -22,7 +22,7 @@ export function QuietReflectionSection({ promptLine }: Props) {
       <Text style={styles.kicker}>Note-inspired pause</Text>
       <Text style={styles.h2}>How is your heart today?</Text>
       <Text style={styles.body}>
-        Take one slow breath. You don't need to fix anything yet — only notice, gently.
+        Take one slow breath. You do not need to fix anything yet — only notice, gently.
       </Text>
       <View style={styles.promptWrap}>
         <Text style={styles.prompt}>{promptLine}</Text>

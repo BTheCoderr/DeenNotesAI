@@ -1,6 +1,9 @@
 /**
  * Rasterize web brand SVGs into Expo asset PNGs (see apps/mobile/app.json paths).
  * Run from repo root: npm run mobile:icons
+ *
+ * Note: this overwrites icon.png and adaptive-icon.png. If you use hand-authored app icons
+ * (e.g. App Store squircles), skip this script or point ICON at an SVG that matches that art.
  */
 const fs = require("fs");
 const path = require("path");

@@ -59,6 +59,30 @@ const config = getDefaultConfig(__dirname);
 
 config.watchFolders = [...new Set([...(config.watchFolders ?? []), monorepoRoot])];
 
+const mobileNodeModules = path.join(__dirname, "node_modules");
+const rootNodeModules = path.join(monorepoRoot, "node_modules");
+// Monorepo: resolve workspace deps (e.g. @tanstack/react-query) from this app first, then repo root.
+config.resolver.nodeModulesPaths = [
+  mobileNodeModules,
+  rootNodeModules,
+  ...(config.resolver.nodeModulesPaths ?? []),
+];
+
+// Point Metro at a single `react` install to reduce duplicate-React warnings in workspaces.
+const reactMobile = path.join(mobileNodeModules, "react");
+const reactAtRepoRoot = path.join(rootNodeModules, "react");
+const reactPackageRoot = fs.existsSync(path.join(reactMobile, "package.json"))
+  ? reactMobile
+  : fs.existsSync(path.join(reactAtRepoRoot, "package.json"))
+    ? reactAtRepoRoot
+    : null;
+if (reactPackageRoot) {
+  config.resolver.extraNodeModules = {
+    ...(config.resolver.extraNodeModules ?? {}),
+    react: reactPackageRoot,
+  };
+}
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const sharedFile = resolveRepoSharedSourceFile(moduleName);
   if (sharedFile) {

@@ -18,6 +18,7 @@ import { formatDurationShort } from "../../src/lib/khutbah-compose";
 import { commitKhutbahRecording } from "../../src/lib/khutbah-recordings-storage";
 import { safeBack } from "../../src/lib/navigation/safe-back";
 import { usePremium } from "../../src/hooks/usePremium";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import {
   border,
   bronze,
@@ -57,6 +58,7 @@ function KhutbahRecordingSessionScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const premium = usePremium();
+  const { canSaveRecordings } = usePremiumFeatureFlags();
   const {
     phase,
     elapsedMs,
@@ -141,7 +143,7 @@ function KhutbahRecordingSessionScreen() {
   }, [permissionDenied, supportsPauseResume]);
 
   const gateRecording =
-    premium.purchasesAvailable && premium.isHydrated && !premium.isPremium;
+    premium.purchasesAvailable && premium.isHydrated && !canSaveRecordings;
 
   if (!premium.isHydrated) {
     return (

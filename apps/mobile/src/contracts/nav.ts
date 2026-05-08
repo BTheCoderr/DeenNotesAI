@@ -24,3 +24,8 @@ export const PRIMARY_TAB_ORDER = PRIMARY_TAB_CONTRACT.map((tab) => ({
 }[];
 
 export const SETTINGS_PROFILE_ROUTE = `/${SHARED_SETTINGS_PROFILE_ROUTE.mobileRouteName}` as const;
+
+/** Stable hrefs for gear + deep links — single place to avoid path drift. */
+export const QURAN_PREFERENCES_ROUTE = "/quran/settings" as const;
+export const PRAYER_PREFERENCES_ROUTE = "/settings/prayer" as const;
+export const WIDGET_PREFERENCES_ROUTE = "/settings/widget" as const;

@@ -5,6 +5,8 @@ import Purchases from "react-native-purchases";
 
 import { getPremiumEntitlementId, getRevenueCatIosApiKey } from "./expo-extra";
 
+import { COPY_SUBSCRIPTIONS_UNAVAILABLE } from "../../contracts/review-user-copy";
+
 let configured = false;
 
 export function isRevenueCatAvailable(): boolean {
@@ -14,10 +16,14 @@ export function isRevenueCatAvailable(): boolean {
 /** Best-effort; safe no-op when key absent or Android (iOS storefront primary). */
 export async function configureRevenueCatBootstrap(): Promise<void> {
   if (configured || !isRevenueCatAvailable()) return;
-  const apiKey = getRevenueCatIosApiKey();
-  await Purchases.configure({ apiKey });
-  Purchases.setLogLevel(__DEV__ ? Purchases.LOG_LEVEL.DEBUG : Purchases.LOG_LEVEL.ERROR);
-  configured = true;
+  try {
+    const apiKey = getRevenueCatIosApiKey();
+    await Purchases.configure({ apiKey });
+    Purchases.setLogLevel(__DEV__ ? Purchases.LOG_LEVEL.DEBUG : Purchases.LOG_LEVEL.ERROR);
+    configured = true;
+  } catch {
+    /* Keep `configured` false — UI must not call Purchases until bootstrap succeeds. */
+  }
 }
 
 export function isPurchasesConfigured(): boolean {
@@ -58,17 +64,17 @@ export async function loginRevenueCatWithUserId(appUserId: string): Promise<void
   }
 }
 
-export async function restorePurchasesNative(): Promise<CustomerInfo> {
+export async function restorePurchasesNative(): Promise<CustomerInfo | null> {
   await configureRevenueCatBootstrap();
-  if (!isPurchasesConfigured()) {
-    throw new Error("Subscriptions are unavailable in this build.");
-  }
+  if (!isPurchasesConfigured()) return null;
   return Purchases.restorePurchases();
 }
 
 export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
   await configureRevenueCatBootstrap();
-  if (!isPurchasesConfigured()) throw new Error("Subscriptions are unavailable.");
+  if (!isPurchasesConfigured()) {
+    throw new Error(COPY_SUBSCRIPTIONS_UNAVAILABLE);
+  }
   const { customerInfo } = await Purchases.purchasePackage(pkg);
   return customerInfo;
 }

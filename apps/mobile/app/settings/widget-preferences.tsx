@@ -69,8 +69,8 @@ export default function WidgetPreferencesScreen() {
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.intro}>
-          iOS widgets are not bundled in Expo Go — these layouts mirror what a WidgetKit extension
-          would render from shared JSON once you add a native target.
+          iOS widgets are not bundled in Expo Go — these layouts mirror what a WidgetKit extension would render from
+          shared JSON once you add a native target.
         </Text>
 
         <RowToggle label="Widgets enabled" value={prefs.enabled} onValueChange={(v) => patch({ enabled: v })} />

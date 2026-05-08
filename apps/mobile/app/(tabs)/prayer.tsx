@@ -1,7 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -19,12 +19,14 @@ import { usePrayerMonth } from "../../src/api/hooks/usePrayerMonth";
 import { usePrayerRamadan } from "../../src/api/hooks/usePrayerRamadan";
 import { PrayerReminderPrefs } from "../../src/components/PrayerReminderPrefs";
 import { PrayerTimesCard } from "../../src/components/PrayerTimesCard";
+import { NextPrayerCard } from "../../src/components/prayer/NextPrayerCard";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
+import { SettingsGearButton } from "../../src/components/settings/SettingsGearButton";
 import { CalmPulseBlock } from "../../src/components/skeleton/CalmSkeleton";
 import { LOCATION_FALLBACK } from "../../src/contracts/prayer-preferences";
-import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
+import { PRAYER_PREFERENCES_ROUTE, SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
 import { usePremium } from "../../src/hooks/usePremium";
-import { formatCountdown } from "../../src/lib/format-time";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import {
   refreshStoredDeviceLocation,
 } from "../../src/lib/prayer-location";
@@ -70,10 +72,10 @@ const SEGMENTS: { id: Seg; label: string }[] = [
 function PrayerScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
-  const plannerUnlocked = !purchasesAvailable || isPremium;
+  const { openPaywall } = usePremium();
+  const { canUseRamadanPlannerSurfaces } = usePremiumFeatureFlags();
+  const plannerUnlocked = canUseRamadanPlannerSurfaces;
   const [section, setSection] = useState<Seg>("today");
-  const [tick, setTick] = useState(0);
   const [city, setCity] = useState<string>(LOCATION_FALLBACK.city);
   const [country, setCountry] = useState<string>(LOCATION_FALLBACK.country);
   const [region, setRegion] = useState<string>(LOCATION_FALLBACK.region);
@@ -88,11 +90,6 @@ function PrayerScreen() {
   const { data, isLoading, error, refetch, isRefetching } = usePrayerToday();
   const ramadanQ = usePrayerRamadan({ enabled: section === "ramadan" && plannerUnlocked });
   const monthQ = usePrayerMonth({ enabled: section === "calendar" && plannerUnlocked });
-
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     void readMobilePrayerLocationPrefs().then((p) => {
@@ -116,12 +113,6 @@ function PrayerScreen() {
       })();
     }, []),
   );
-
-  const nextMs = useMemo(() => {
-    if (!data || !("ok" in data) || !data.ok || !data.schedule.nextAtEpochMs)
-      return null;
-    return data.schedule.nextAtEpochMs - Date.now();
-  }, [data, tick]);
 
   const ok = data && "ok" in data && data.ok;
   const label = ok ? data.locationLabel : FALLBACK_LABEL;
@@ -224,19 +215,27 @@ function PrayerScreen() {
       >
         <View style={styles.screenTitleRow}>
           <Text style={styles.h1}>Prayer</Text>
-          <Pressable
-            onPress={() => router.push(SETTINGS_PROFILE_ROUTE)}
-            style={styles.settingsIconBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={24} color={emerald} />
-          </Pressable>
+          <SettingsGearButton href={SETTINGS_PROFILE_ROUTE} accessibilityLabel="Settings" />
         </View>
         <Text style={styles.lead}>
           A quiet companion for the day&apos;s rhythm — not a dashboard.
         </Text>
+
+        <Pressable
+          style={styles.prefShortcut}
+          onPress={() => router.push(PRAYER_PREFERENCES_ROUTE)}
+          accessibilityRole="button"
+          accessibilityLabel="Prayer preferences"
+          accessibilityHint="Opens Prayer Preferences in Settings"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.prefShortcutTitle}>Prayer preferences</Text>
+            <Text style={styles.prefShortcutSub}>
+              Times, reminders, location, and calculation — full screen in Settings
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={muted} />
+        </Pressable>
 
         <View style={styles.segRow}>
           {SEGMENTS.map((s) => (
@@ -286,17 +285,17 @@ function PrayerScreen() {
               </View>
             ) : ok ? (
               <View style={styles.gap}>
+                <NextPrayerCard
+                  data={data}
+                  showFallback
+                  onManageReminders={() => setSection("preferences")}
+                />
                 <View style={styles.card}>
                   <Text style={styles.k}>Your locality</Text>
                   <Text style={styles.bodyStrong}>{label}</Text>
                   <Text style={styles.hijri}>{data.hijriLabel}</Text>
                   <Text style={styles.rowMeta}>
-                    Now · {data.schedule.currentPrayer ?? "—"} (
-                    {data.schedule.currentLabel})
-                  </Text>
-                  <Text style={styles.rowMeta}>
-                    Next · {data.schedule.nextPrayer} ·{" "}
-                    {formatCountdown(nextMs)}
+                    Now · {data.schedule.currentPrayer ?? "—"} ({data.schedule.currentLabel})
                   </Text>
                 </View>
                 <PrayerTimesCard
@@ -309,7 +308,7 @@ function PrayerScreen() {
               <View style={styles.card}>
                 <Text style={styles.calmOfflineTitle}>Prayer times need a quieter moment online</Text>
                 <Text style={styles.calmOfflineBody}>
-                  Pull down softly to retry, or open the Settings (gear) menu → Location if your city shifted. Technical messages stay out of view so the screen stays peaceful.
+                  Pull down softly to retry, or open Settings → Preferences → Location if your city shifted. Technical messages stay out of view so the screen stays peaceful.
                 </Text>
                 {__DEV__ && typeof data.error === "string" ? (
                   <Text style={styles.bannerMeta}>{data.error}</Text>
@@ -545,6 +544,7 @@ function PrayerScreen() {
             <PrayerReminderPrefs
               advancedUnlocked={plannerUnlocked}
               onRequestAdvanced={() => openPaywall("advanced_prayer_reminders")}
+              onAfterChange={() => void invalidatePrayer()}
             />
 
             <View style={styles.banner}>
@@ -594,7 +594,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.md,
   },
-  settingsIconBtn: { padding: 4 },
   h1: {
     fontFamily: fontSerifHeading,
     fontSize: 28,
@@ -602,6 +601,20 @@ const styles = StyleSheet.create({
     color: ink,
   },
   lead: { fontSize: fontSizes.sm, color: muted, lineHeight: 22 },
+  prefShortcut: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: border,
+    backgroundColor: cardBg,
+    marginBottom: spacing.sm,
+  },
+  prefShortcutTitle: { fontSize: fontSizes.md, fontWeight: "700", color: ink },
+  prefShortcutSub: { fontSize: fontSizes.xs, color: muted, marginTop: 4, lineHeight: 18 },
   segRow: {
     flexDirection: "row",
     flexWrap: "wrap",

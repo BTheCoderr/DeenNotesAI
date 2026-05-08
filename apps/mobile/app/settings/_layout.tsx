@@ -24,11 +24,12 @@ export default function SettingsLayout() {
       <Stack.Screen name="prayer" options={{ title: "Prayer Preferences" }} />
       <Stack.Screen name="location" options={{ title: "Location" }} />
       <Stack.Screen name="hijri" options={{ title: "Hijri & Ramadan" }} />
-      <Stack.Screen name="quran" options={{ title: "Quran preferences" }} />
+      <Stack.Screen name="quran" options={{ title: "Reading & translation" }} />
       <Stack.Screen name="offline" options={{ title: "Offline Quran" }} />
       <Stack.Screen name="recordings" options={{ title: "Recordings" }} />
       <Stack.Screen name="continuity-preferences" options={{ title: "Reflection preferences" }} />
-      <Stack.Screen name="widget-preferences" options={{ title: "Home widgets" }} />
+      <Stack.Screen name="widget" options={{ title: "Widget preferences" }} />
+      <Stack.Screen name="widget-preferences" options={{ title: "Widget preferences" }} />
       <Stack.Screen name="folders" options={{ title: "Folders" }} />
       <Stack.Screen name="privacy" options={{ title: "Privacy" }} />
       <Stack.Screen name="terms" options={{ title: "Terms" }} />

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 import {
   PRAYER_REMINDER_PRAYERS,
   PRAYER_SPECIAL_REMINDERS,
-  REMINDER_OFFSETS_MINUTES,
 } from "../contracts/prayer-preferences";
 import { bumpPrayerNotificationSchedule } from "../lib/notifications/prayer-schedule-signal";
 import {
@@ -12,6 +11,7 @@ import {
   writeMobileReminderPrefs,
   type MobileReminderPrefsState,
 } from "../lib/prayer-reminder-storage";
+import { requestNotificationPermissions, syncNotificationPermissionRecord } from "../lib/notifications";
 import {
   border,
   bronze,
@@ -24,6 +24,7 @@ import {
   spacing,
   stone,
 } from "../theme";
+
 function labelPrayer(k: string): string {
   return k.slice(0, 1).toUpperCase() + k.slice(1);
 }
@@ -33,6 +34,32 @@ function labelSpecial(k: string): string {
   if (k === "suhoor") return "Suhoor";
   if (k === "iftar") return "Iftar";
   return k;
+}
+
+function schedulingActive(p: MobileReminderPrefsState, advancedUnlocked: boolean): boolean {
+  const salah = PRAYER_REMINDER_PRAYERS.some((k) => p.prayers[k]);
+  const special =
+    advancedUnlocked && (p.jumuah || p.suhoor || p.iftar);
+  return salah || Boolean(special);
+}
+
+function togglingReminderOn(
+  prev: MobileReminderPrefsState,
+  next: MobileReminderPrefsState,
+  advancedUnlocked: boolean,
+): boolean {
+  if (!schedulingActive(prev, advancedUnlocked) && schedulingActive(next, advancedUnlocked)) {
+    return true;
+  }
+  if (PRAYER_REMINDER_PRAYERS.some((k) => next.prayers[k] && !prev.prayers[k])) return true;
+  if (
+    advancedUnlocked &&
+    ((!prev.jumuah && next.jumuah) ||
+      (!prev.suhoor && next.suhoor) ||
+      (!prev.iftar && next.iftar))
+  )
+    return true;
+  return false;
 }
 
 export function PrayerReminderPrefs({
@@ -50,15 +77,35 @@ export function PrayerReminderPrefs({
     void readMobileReminderPrefs().then(setPrefs);
   }, []);
 
-  const persist = useCallback(
-    (next: MobileReminderPrefsState) => {
+  const applyPrefs = useCallback(
+    async (next: MobileReminderPrefsState) => {
+      if (!prefs) return;
+      const prev = prefs;
+
+      const want = schedulingActive(next, advancedUnlocked);
+      const turnOn = togglingReminderOn(prev, next, advancedUnlocked);
+
+      if (turnOn) {
+        const granted = await requestNotificationPermissions();
+        await syncNotificationPermissionRecord();
+        if (!granted) {
+          Alert.alert(
+            "Notifications muted",
+            "We can schedule gentle salah reminders locally after notifications are allowed. Prayer times stay available anytime you open Prayer or Today.",
+          );
+          return;
+        }
+      } else if (want && next.leadMinutes !== prev.leadMinutes) {
+        await requestNotificationPermissions();
+        await syncNotificationPermissionRecord();
+      }
+
       setPrefs(next);
-      void writeMobileReminderPrefs(next).then(() => {
-        bumpPrayerNotificationSchedule();
-        onAfterChange?.();
-      });
+      await writeMobileReminderPrefs(next);
+      bumpPrayerNotificationSchedule();
+      onAfterChange?.();
     },
-    [onAfterChange],
+    [advancedUnlocked, onAfterChange, prefs],
   );
 
   if (!prefs) {
@@ -78,22 +125,25 @@ export function PrayerReminderPrefs({
 
       {!advancedUnlocked ? (
         <Text style={[styles.caption, { marginTop: spacing.sm }]}>
-          Lead-times ahead of adhān and speciality reminders stay with DeenNotes Plus — the five daily salah toggles
-          below stay open on the complimentary path.
+          The five daily salah toggles plus calm lead-times (including at adhān) stay open — speciality reminders remain
+          with DeenNotes Plus.
         </Text>
       ) : null}
 
       <Text style={styles.sub}>Lead time</Text>
       <View style={styles.chips}>
-        {([...REMINDER_OFFSETS_MINUTES] as const).map((m) => (
+        {(advancedUnlocked || prefs.leadMinutes === 30
+          ? ([0, 5, 10, 15, 30] as const)
+          : ([0, 5, 10, 15] as const)
+        ).map((m) => (
           <Pressable
             key={m}
             onPress={() => {
-              if (!advancedUnlocked) {
+              if (m === 30 && !advancedUnlocked) {
                 onRequestAdvanced();
                 return;
               }
-              persist({ ...prefs, leadMinutes: m });
+              void applyPrefs({ ...prefs, leadMinutes: m });
             }}
             style={[styles.chip, prefs.leadMinutes === m && styles.chipActive]}
           >
@@ -110,12 +160,7 @@ export function PrayerReminderPrefs({
           <Text style={styles.rowLabel}>{labelPrayer(k)}</Text>
           <Switch
             value={prefs.prayers[k]}
-            onValueChange={(v) =>
-              persist({
-                ...prefs,
-                prayers: { ...prefs.prayers, [k]: v },
-              })
-            }
+            onValueChange={(v) => void applyPrefs({ ...prefs, prayers: { ...prefs.prayers, [k]: v } })}
             trackColor={{ true: emerald, false: border }}
           />
         </View>
@@ -135,7 +180,7 @@ export function PrayerReminderPrefs({
                   onRequestAdvanced();
                   return;
                 }
-                persist({
+                void applyPrefs({
                   ...prefs,
                   ...(k === "jumuah" ? { jumuah: v } : {}),
                   ...(k === "suhoor" ? { suhoor: v } : {}),

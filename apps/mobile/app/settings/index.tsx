@@ -18,11 +18,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { deleteAccountOnServer } from "../../src/api/deleteAccount";
+import { DeenNotesAppIconMark } from "../../src/components/brand/DeenNotesAppIconMark";
+import {
+  COPY_ACCOUNT_DELETE_UNAVAILABLE,
+  COPY_RESTORE_INCOMPLETE,
+  COPY_SUBSCRIPTIONS_UNAVAILABLE,
+} from "../../src/contracts/review-user-copy";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
 import { usePremium } from "../../src/hooks/usePremium";
 import { clearAllLocalPersistedAppData } from "../../src/lib/account/clear-local-user-state";
 import { logoutRevenueCatIfConfigured } from "../../src/lib/purchases/revenuecat-bootstrap";
 import { supabase } from "../../src/lib/supabase";
+import { WIDGET_PREFERENCES_ROUTE } from "../../src/contracts/nav";
 import {
   border,
   bronze,
@@ -137,8 +144,8 @@ export default function SettingsIndexScreen() {
       Alert.alert("Account deleted", "Your DeenNotes account and synced server data have been removed.", [
         { text: "OK", onPress: () => router.replace("/login") },
       ]);
-    } catch (e) {
-      Alert.alert("Could not delete account", e instanceof Error ? e.message : "Try again when you have a connection.");
+    } catch {
+      Alert.alert("Could not delete account", COPY_ACCOUNT_DELETE_UNAVAILABLE);
     } finally {
       setDeletingAccount(false);
     }
@@ -146,10 +153,7 @@ export default function SettingsIndexScreen() {
 
   async function onRestorePurchases() {
     if (!purchasesAvailable) {
-      Alert.alert(
-        "Restore unavailable",
-        "Restoring purchases requires the iOS app with RevenueCat configured.",
-      );
+      Alert.alert("Restore purchases", COPY_SUBSCRIPTIONS_UNAVAILABLE);
       return;
     }
     setRestoring(true);
@@ -166,11 +170,8 @@ export default function SettingsIndexScreen() {
           "We didn’t find an active DeenNotes Plus entitlement on this Apple ID for this device. If you subscribed with a different Apple ID or the purchase is pending, sign in correctly or wait a moment and try again.",
         );
       }
-    } catch (e) {
-      Alert.alert(
-        "Couldn’t restore",
-        e instanceof Error ? e.message : "Try again once you’re online.",
-      );
+    } catch {
+      Alert.alert("Couldn't restore", COPY_RESTORE_INCOMPLETE);
     } finally {
       setRestoring(false);
     }
@@ -178,10 +179,7 @@ export default function SettingsIndexScreen() {
 
   function onSubscriptionPress() {
     if (!purchasesAvailable) {
-      Alert.alert(
-        "Subscriptions",
-        "Subscription management appears on builds with RevenueCat keys.",
-      );
+      Alert.alert("Subscriptions", COPY_SUBSCRIPTIONS_UNAVAILABLE);
       return;
     }
     if (isPremium) {
@@ -212,7 +210,10 @@ export default function SettingsIndexScreen() {
             accessibilityRole="button"
             accessibilityLabel="DeenNotes Plus privileges"
             onPress={() => {
-              if (!purchasesAvailable) return;
+              if (!purchasesAvailable) {
+                Alert.alert("DeenNotes Plus", COPY_SUBSCRIPTIONS_UNAVAILABLE);
+                return;
+              }
               if (isPremium) {
                 Alert.alert(
                   "DeenNotes Plus",
@@ -222,24 +223,28 @@ export default function SettingsIndexScreen() {
               }
               openPaywall("general");
             }}
-            disabled={!purchasesAvailable}
           >
-            <View style={styles.badge}>
-              <Ionicons name="sparkles" size={16} color={emerald} style={{ marginRight: 6 }} />
-              <Text style={styles.badgeTxt}>{isPremium ? "Plus · active" : "DeenNotes Plus"}</Text>
+            <View style={styles.plusCardBrand}>
+              <DeenNotesAppIconMark size={52} accessibilityLabel="DeenNotes" />
+              <View style={styles.plusCardBrandText}>
+                <View style={styles.badge}>
+                  <Ionicons name="sparkles" size={16} color={emerald} style={{ marginRight: 6 }} />
+                  <Text style={styles.badgeTxt}>{isPremium ? "Plus · active" : "DeenNotes Plus"}</Text>
+                </View>
+                <Text style={styles.plusTitle}>My privileges</Text>
+              </View>
             </View>
-            <Text style={styles.plusTitle}>My privileges</Text>
             <Text style={styles.plusSub}>
               {isPremium
                 ? "Deeper reflective space and listening — paced for your journey. Thank you for supporting DeenNotes."
                 : "Unhurried listening, richer reflection flow, and gentle rhythm across prayer and Quran."}
             </Text>
-            {purchasesAvailable && !isPremium ? (
-              <Text style={styles.plusHint}>Tap to explore Plus calmly</Text>
-            ) : !purchasesAvailable ? (
-              <Text style={styles.plusHint}>Plus unlocks on iOS with RevenueCat keys</Text>
-            ) : (
+            {isPremium ? (
               <Text style={styles.plusHint}>Blessed support — privileges are active</Text>
+            ) : purchasesAvailable ? (
+              <Text style={styles.plusHint}>Tap to explore Plus calmly</Text>
+            ) : (
+              <Text style={styles.plusHint}>{COPY_SUBSCRIPTIONS_UNAVAILABLE}</Text>
             )}
           </Pressable>
         </Section>
@@ -315,9 +320,35 @@ export default function SettingsIndexScreen() {
           ) : null}
         </Section>
 
+        <Section title="Preferences">
+          <ChevRow
+            icon="time-outline"
+            title="Prayer preferences"
+            subtitle="Prayer times, reminders, location, and calculation method"
+            href="/settings/prayer"
+          />
+          <ChevRow
+            icon="book-outline"
+            title="Quran preferences"
+            subtitle="Reading language, focus mode, recitation, and Ramadan prep"
+            href="/quran/settings"
+          />
+          <ChevRow
+            icon="grid-outline"
+            title="Widget preferences"
+            subtitle="Next prayer, reflection continuity, and home screen context"
+            href={WIDGET_PREFERENCES_ROUTE}
+          />
+          <ChevRow
+            icon="location-outline"
+            title="Location"
+            subtitle="City, country, and precise location settings"
+            href="/settings/location"
+            last
+          />
+        </Section>
+
         <Section title="Worship">
-          <ChevRow icon="time-outline" title="Prayer Preferences" href="/settings/prayer" />
-          <ChevRow icon="location-outline" title="Location" subtitle="City-level salah placement" href="/settings/location" />
           <ChevRow icon="calendar-outline" title="Hijri calendar" subtitle="Islamic calendar overlays" href="/settings/hijri" />
           <ChevRow
             icon="moon-outline"
@@ -329,15 +360,13 @@ export default function SettingsIndexScreen() {
         </Section>
 
         <Section title="Quran">
-          <ChevRow icon="book-outline" title="Quran preferences" subtitle="Reading, translation & defaults" href="/settings/quran" />
-          <ChevRow icon="archive-outline" title="Offline reading" subtitle="Cached surahs on-device" href="/settings/offline" />
           <ChevRow
-            icon="mic-outline"
-            title="Reciter & audio"
-            subtitle="Playback & narration"
-            href="/quran/settings"
-            last
+            icon="library-outline"
+            title="Reading & translation hub"
+            subtitle="Shortcuts into reading, narration, and offline cache"
+            href="/settings/quran"
           />
+          <ChevRow icon="archive-outline" title="Offline reading" subtitle="Cached surahs on-device" href="/settings/offline" last />
         </Section>
 
         <Section title="Reflection">
@@ -471,6 +500,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(184,134,11,0.06)",
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  plusCardBrand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  plusCardBrandText: {
+    flex: 1,
+    gap: spacing.xs,
   },
   badge: {
     flexDirection: "row",

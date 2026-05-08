@@ -239,10 +239,14 @@ export function PremiumProvider({ children }: PropsWithChildren) {
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     await configureRevenueCatBootstrap();
     if (!isPurchasesConfigured()) return false;
-    await restorePurchasesNative();
-    await refreshEntitlements();
-    const info = await fetchCustomerInfoSafe();
-    return premiumActiveFromCustomerInfo(info);
+    try {
+      const info = await restorePurchasesNative();
+      await refreshEntitlements();
+      return premiumActiveFromCustomerInfo(info);
+    } catch {
+      await refreshEntitlements();
+      return false;
+    }
   }, [refreshEntitlements]);
 
   const assertPremiumOrPaywall = useCallback(

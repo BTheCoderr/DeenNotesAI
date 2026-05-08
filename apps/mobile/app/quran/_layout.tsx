@@ -16,7 +16,8 @@ export default function QuranSubgroupLayout() {
         headerLeft: () => <AppBackHeaderButton fallback={QuranHub} />,
       }}
     >
-      <Stack.Screen name="settings" options={{ title: "Quran settings" }} />
+      <Stack.Screen name="settings" options={{ title: "Quran Preferences" }} />
+      <Stack.Screen name="reading" options={{ title: "Reading modes" }} />
       <Stack.Screen name="[surah]" options={{ title: "Reader" }} />
     </Stack>
   );

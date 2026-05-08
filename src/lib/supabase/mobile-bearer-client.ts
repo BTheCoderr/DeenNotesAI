@@ -9,7 +9,7 @@ export function corsHeadersForMobileApi(request: NextRequest): Record<string, st
   const allow = origin?.length ? origin : "*";
   return {
     "Access-Control-Allow-Origin": allow,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     Vary: "Origin",
   };

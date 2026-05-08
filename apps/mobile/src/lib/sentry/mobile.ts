@@ -65,7 +65,6 @@ export function captureAppIssue(scope: string, err: unknown, extra?: Record<stri
   const dsn = resolveDsn();
   if (!dsn) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.warn(`[DeenNotes:${scope}] Monitoring disabled — no EXPO_PUBLIC_SENTRY_DSN`, err, extra);
     }
     return;
@@ -93,7 +92,6 @@ export function observeProductEvent(
   data?: Record<string, string | number | boolean>,
 ): void {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
     console.info(`[deennotes:${event}]`, data ?? {});
   }
   const dsn = resolveDsn();
@@ -114,7 +112,6 @@ export function captureAppMessage(
   const dsn = resolveDsn();
   if (!dsn) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.warn(`[DeenNotes:${scope}] Monitoring disabled — no EXPO_PUBLIC_SENTRY_DSN`, message, level);
     }
     return;

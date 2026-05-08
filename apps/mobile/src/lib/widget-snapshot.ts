@@ -11,6 +11,7 @@ import type {
 } from "../contracts/live-activity-prep";
 import type { WidgetPreferencesV1 } from "../contracts/widget-preferences";
 import { formatCountdown, formatPrayerInPhrase } from "./format-time";
+import { formatNextPrayerCountdown } from "../services/prayerTimesService";
 import type { ContinueReadingState } from "./quran-continue-reading";
 import { pickDailyAyahRef, stableLocalDaySeed } from "./daily-ayah";
 import {
@@ -26,7 +27,14 @@ export type WidgetReflectionReminder = {
 };
 
 export type WidgetPrayerSlice = {
+  /** Display name for the upcoming salah row. */
   nextPrayerName: string;
+  /** Wall-clock time string for today’s next salah (defaults). */
+  nextPrayerTime: string | null;
+  /** H/M style countdown suited for widgets. */
+  nextPrayerCountdownLabel: string;
+  /** Mirrors snapshot build timestamp for freshness checks. */
+  generatedAtEpochMs: number;
   nextAtEpochMs: number | null;
   countdownLabel: string;
   softPhrase: string;
@@ -174,8 +182,18 @@ export function buildWidgetSnapshotV1(inputs: WidgetSnapshotInputs): DeennotesWi
         inputs.prayer.schedule.nextAtEpochMs != null
           ? inputs.prayer.schedule.nextAtEpochMs - inputs.nowMs
           : null;
+      const nextName = pf.showNextPrayer ? inputs.prayer.schedule.nextPrayer : "—";
+      const nextTime =
+        pf.showNextPrayer && inputs.prayer.timings[inputs.prayer.schedule.nextPrayer]
+          ? inputs.prayer.timings[inputs.prayer.schedule.nextPrayer]
+          : null;
       prayerSlice = {
-        nextPrayerName: pf.showNextPrayer ? inputs.prayer.schedule.nextPrayer : "—",
+        nextPrayerName: nextName,
+        nextPrayerTime: nextTime,
+        nextPrayerCountdownLabel: pf.showCountdown
+          ? formatNextPrayerCountdown(nextMs != null ? Math.max(0, nextMs) : null)
+          : "—",
+        generatedAtEpochMs: inputs.nowMs,
         nextAtEpochMs: pf.showCountdown ? inputs.prayer.schedule.nextAtEpochMs : null,
         countdownLabel: pf.showCountdown ? formatCountdown(nextMs) : "—",
         softPhrase: pf.showCountdown ? formatPrayerInPhrase(nextMs) : "Salah rhythm",

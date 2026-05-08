@@ -27,6 +27,15 @@ import type { QuranPreferenceContract } from "../../contracts/quran-preferences"
 import { writeContinueReading } from "../../lib/quran-continue-reading";
 import { readMobileQuranPrefs } from "../../lib/mobile-quran-prefs";
 import { safeBack } from "../../lib/navigation/safe-back";
+import {
+  addQuranBookmark,
+  ayahKey,
+  getQuranReadingProgress,
+  mergeReadingProgress,
+  recordReadingPosition,
+  removeQuranBookmarkForAyah,
+} from "../../services/quranReadingService";
+import type { QuranReadingModeId } from "../../types/quran-reading";
 import { CalmPulseBlock } from "../skeleton/CalmSkeleton";
 import {
   border,
@@ -54,6 +63,11 @@ type Props = {
   /** Surah prefetch + explicit save bundles (RevenueCat). */
   offlineAudioUnlocked: boolean;
   onRequestOfflineAudioPremium: () => void;
+  /** When set, only verses in [start … end of surah] are shown (`end` omitted = through last ayah). */
+  ayahRange?: { start: number; end?: number | null } | null;
+  readingMode?: QuranReadingModeId | null;
+  /** Short label surfaced under surah heading (guided reading). */
+  readingModeLabel?: string | null;
 };
 
 /** Scroll + verse UI for one surah. Immersion, prefetch, playback controls. Auto-scroll anchor prep: refs on ScrollView — parent passes initialResumeAyah. */
@@ -68,6 +82,9 @@ export function QuranSurahReader({
   showOfflineRibbon,
   offlineAudioUnlocked,
   onRequestOfflineAudioPremium,
+  ayahRange = null,
+  readingMode = null,
+  readingModeLabel = null,
 }: Props) {
   const router = useRouter();
   const navigation = useNavigation();
@@ -77,16 +94,44 @@ export function QuranSurahReader({
   const [prefs, setPrefs] = useState<QuranPreferenceContract | null>(null);
   const [translationsRevealed, setTranslationsRevealed] = useState(true);
   const [downloadBusy, setDownloadBusy] = useState(false);
+  const [showImlaei, setShowImlaei] = useState(false);
+  const [bookmarkKeys, setBookmarkKeys] = useState<ReadonlySet<string>>(() => new Set());
   const { playVerse, reciterIdEffective } = useQuranPlayback();
 
   useEffect(() => {
     void readMobileQuranPrefs().then(setPrefs);
   }, []);
 
-  const immersive = Boolean(prefs?.immersiveReading);
+  useEffect(() => {
+    void getQuranReadingProgress().then((p) => {
+      setBookmarkKeys(new Set((p.bookmarks ?? []).map((b) => ayahKey(b.surahId, b.ayah))));
+    });
+  }, [chapterId]);
+
+  useEffect(() => {
+    if (!chapterId || !readingMode) return;
+    const endResolved =
+      ayahRange?.end != null && Number.isFinite(ayahRange.end)
+        ? Math.trunc(ayahRange.end as number)
+        : chapterMeta?.versesCount ?? ayahRange?.start ?? 1;
+    const selectedRange =
+      ayahRange != null
+        ? {
+            surahId: chapterId,
+            startAyah: Math.max(1, ayahRange.start),
+            endAyah: Math.max(ayahRange.start, endResolved),
+          }
+        : null;
+    void mergeReadingProgress({
+      readingMode,
+      selectedRange,
+    });
+  }, [chapterId, readingMode, ayahRange, chapterMeta?.versesCount]);
   const wifiOnly = prefs?.audioWifiOnly ?? false;
   const maxMb = prefs?.audioMaxCacheMb ?? 200;
   const reciter = (prefs?.reciterId?.trim() || reciterIdEffective) as string;
+
+  const immersive = Boolean(prefs?.immersiveReading);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: !immersive });
@@ -97,13 +142,37 @@ export function QuranSurahReader({
     else setTranslationsRevealed(true);
   }, [immersive]);
 
-  const verseCount = effectivePayload?.verses?.length ?? 0;
+  const versesView = useMemo(() => {
+    const all = effectivePayload?.verses;
+    if (!all?.length) return [];
+    if (!ayahRange) return all;
+    const hi =
+      ayahRange.end != null && Number.isFinite(ayahRange.end)
+        ? (ayahRange.end as number)
+        : Number.POSITIVE_INFINITY;
+    return all.filter((v) => v.verseNumber >= ayahRange.start && v.verseNumber <= hi);
+  }, [effectivePayload?.verses, ayahRange]);
+
+  const verseCountFull = chapterMeta?.versesCount ?? effectivePayload?.verses?.length ?? 0;
+
   const resumeAyah = useMemo(() => {
     if (!effectivePayload?.verses?.length) return null;
     const max = effectivePayload.verses.length;
-    const raw = initialResumeAyah ?? 1;
-    return Math.max(1, Math.min(max, raw));
-  }, [effectivePayload?.verses, initialResumeAyah]);
+    const defaultStart = ayahRange?.start ?? 1;
+    const raw = initialResumeAyah ?? defaultStart;
+    let r = Math.max(1, Math.min(max, raw));
+    if (ayahRange) {
+      const lo = Math.max(1, ayahRange.start);
+      const hi =
+        ayahRange.end != null && Number.isFinite(ayahRange.end)
+          ? Math.min(max, ayahRange.end as number)
+          : max;
+      r = Math.max(lo, Math.min(hi, r));
+    }
+    return r;
+  }, [effectivePayload?.verses, initialResumeAyah, ayahRange]);
+
+  const verseCount = verseCountFull;
 
   const resetHeaderHide = useCallback(() => {
     headerOpacity.setValue(1);
@@ -179,6 +248,11 @@ export function QuranSurahReader({
 
   const approxJuz = resumeAyah != null ? estimateJuz(chapterId, resumeAyah) : null;
 
+  const hasAnyImlaei = useMemo(
+    () => versesView.some((v) => Boolean(v.textImlaei)),
+    [versesView],
+  );
+
   if (!effectivePayload?.verses?.length) {
     if (versesPending) {
       return (
@@ -212,11 +286,32 @@ export function QuranSurahReader({
     );
   }
 
+  if (!versesView.length) {
+    return (
+      <SafeAreaView style={styles.safe} edges={immersive ? ["left", "right"] : ["bottom", "left", "right"]}>
+        <View style={styles.pad}>
+          <Text style={styles.h1}>{chapterMeta?.nameSimple ?? `Surah ${chapterId}`}</Text>
+          <Text style={styles.bodyMuted}>
+            Nothing in this reading window overlaps this surah — widen your ayah range or pick another chapter.
+          </Text>
+          <Pressable onPress={() => safeBack(router, navigation, "/quran/reading")} style={styles.back}>
+            <Text style={styles.backTxt}>Reading hub</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const renderVerse = (v: VerseDto, index: number) => (
     <View key={v.verseKey} collapsable={false}>
       <Pressable
         onPress={() => {
           void writeContinueReading({ surahId: chapterId, ayah: v.verseNumber });
+          void recordReadingPosition(
+            chapterId,
+            v.verseNumber,
+            estimateJuz(chapterId, v.verseNumber),
+          );
           void Animated.spring(headerOpacity, { toValue: 1, useNativeDriver: true }).start();
         }}
         style={({ pressed }) => [
@@ -233,6 +328,9 @@ export function QuranSurahReader({
         >
           {v.textUthmani}
         </Text>
+        {showImlaei && v.textImlaei ? (
+          <Text style={styles.imlaei}>{v.textImlaei}</Text>
+        ) : null}
         <View style={{ opacity: translationsRevealed ? 1 : immersive ? 0.22 : 1 }}>
           {v.translations[0]?.text ? (
             <Text
@@ -249,6 +347,46 @@ export function QuranSurahReader({
         </View>
         <View style={styles.rowActions}>
           <Pressable
+            style={styles.secondaryAyah}
+            onPress={() =>
+              router.push({
+                pathname: "/compose/quran_reflection",
+                params: {
+                  surah: String(chapterId),
+                  ayah: String(v.verseNumber),
+                },
+              })
+            }
+          >
+            <Text style={styles.secondaryAyahTxt}>Reflect on this</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.secondaryAyah,
+              bookmarkKeys.has(ayahKey(chapterId, v.verseNumber)) && styles.secondaryAyahOn,
+            ]}
+            onPress={() =>
+              void (async () => {
+                const k = ayahKey(chapterId, v.verseNumber);
+                if (bookmarkKeys.has(k)) {
+                  await removeQuranBookmarkForAyah(chapterId, v.verseNumber);
+                  setBookmarkKeys((prev) => {
+                    const n = new Set(prev);
+                    n.delete(k);
+                    return n;
+                  });
+                  return;
+                }
+                await addQuranBookmark(chapterId, v.verseNumber);
+                setBookmarkKeys((prev) => new Set(prev).add(k));
+              })()
+            }
+          >
+            <Text style={styles.secondaryAyahTxt}>
+              {bookmarkKeys.has(ayahKey(chapterId, v.verseNumber)) ? "Saved" : "Bookmark"}
+            </Text>
+          </Pressable>
+          <Pressable
             style={styles.playAyah}
             onPress={() =>
               void playVerse({
@@ -264,7 +402,7 @@ export function QuranSurahReader({
           </Pressable>
         </View>
       </Pressable>
-      {index < effectivePayload.verses.length - 1 && immersive ? <View style={styles.verseSpacer} /> : null}
+      {index < versesView.length - 1 && immersive ? <View style={styles.verseSpacer} /> : null}
     </View>
   );
 
@@ -298,8 +436,21 @@ export function QuranSurahReader({
             <Text style={styles.sub}>{chapterMeta.translatedName}</Text>
           ) : null}
           <Text style={immersive ? styles.arImmersive : styles.ar}>{chapterMeta?.nameArabic}</Text>
+          {readingModeLabel ? <Text style={styles.modeBadge}>{readingModeLabel}</Text> : null}
           {approxJuz != null ? (
             <Text style={styles.juzHint}>Approx. Juz {approxJuz} — for Ramadan continuity later.</Text>
+          ) : null}
+          {hasAnyImlaei ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Toggle optional Arabic transcription"
+              onPress={() => setShowImlaei((x) => !x)}
+              style={styles.imlToggle}
+            >
+              <Text style={styles.imlToggleTxt}>
+                {showImlaei ? "Hide simple Arabic transcript" : "Show optional simple Arabic transcript"}
+              </Text>
+            </Pressable>
           ) : null}
         </Animated.View>
 
@@ -333,7 +484,7 @@ export function QuranSurahReader({
                 : "Updating… meanwhile here is what we kept on this phone."}
             </Text>
           ) : null}
-          {effectivePayload.verses.map((v, i) => renderVerse(v, i))}
+          {versesView.map((v, i) => renderVerse(v, i))}
         </View>
 
         <Pressable onPress={() => safeBack(router, navigation, "/(tabs)/quran")} style={styles.back}>
@@ -385,6 +536,22 @@ const styles = StyleSheet.create({
     marginTop: -4,
     marginBottom: spacing.sm,
   },
+  modeBadge: {
+    fontSize: fontSizes.sm,
+    fontWeight: "700",
+    color: emerald,
+    marginBottom: spacing.xs,
+  },
+  imlToggle: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: "rgba(18,122,99,0.25)",
+    marginBottom: spacing.sm,
+  },
+  imlToggleTxt: { fontSize: fontSizes.xs, color: emerald, fontWeight: "700" },
   toolRow: { gap: spacing.xs, marginBottom: spacing.sm },
   toolRowHelper: { fontSize: fontSizes.xs, color: muted, lineHeight: 18 },
   toolBtn: {
@@ -441,6 +608,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     width: "100%",
   },
+  imlaei: {
+    fontSize: fontSizes.sm,
+    color: bronze,
+    lineHeight: 22,
+    textAlign: "left",
+    fontStyle: "italic",
+  },
   trans: {
     fontSize: fontSizes.md,
     color: ink,
@@ -457,7 +631,31 @@ const styles = StyleSheet.create({
   },
   transMuted: { fontSize: fontSizes.sm, color: muted, lineHeight: 20 },
   bodyMuted: { fontSize: fontSizes.md, color: muted, lineHeight: 22 },
-  rowActions: { flexDirection: "row", justifyContent: "flex-end", marginTop: 4 },
+  rowActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: spacing.sm,
+  },
+  secondaryAyah: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: border,
+    backgroundColor: "rgba(0,0,0,0.02)",
+  },
+  secondaryAyahOn: {
+    borderColor: "rgba(18,122,99,0.35)",
+    backgroundColor: "rgba(18,122,99,0.06)",
+  },
+  secondaryAyahTxt: {
+    fontSize: fontSizes.xs,
+    fontWeight: "700",
+    color: ink,
+    maxWidth: 120,
+  },
   playAyah: {
     paddingVertical: 8,
     paddingHorizontal: 14,

@@ -49,7 +49,7 @@ export default function QuranSettingsHubScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
       <View style={styles.pad}>
-        <Text style={styles.h1}>Quran preferences</Text>
+        <Text style={styles.h1}>Reading & translation</Text>
         <Text style={styles.lead}>
           Tune translation language, tafsir depth, narration, immersive reading, and careful audio downloads.
         </Text>

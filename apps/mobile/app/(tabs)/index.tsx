@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -21,6 +21,8 @@ import { DailyAyahCard } from "../../src/components/today/DailyAyahCard";
 import { JourneyWeekStrip } from "../../src/components/today/JourneyWeekStrip";
 import { QuietReflectionSection } from "../../src/components/today/QuietReflectionSection";
 import { TodayPrayerHero } from "../../src/components/today/TodayPrayerHero";
+import { NextPrayerCard } from "../../src/components/prayer/NextPrayerCard";
+import { SettingsGearButton } from "../../src/components/settings/SettingsGearButton";
 import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
 import { DEENNOTES_SAFETY_DISCLAIMER } from "../../src/contracts/safety-copy";
 import { readJourneyStreak } from "../../src/lib/continuity-storage";
@@ -62,17 +64,15 @@ function TodayScreenInner() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data, isLoading, error, refetch, isRefetching } = usePrayerToday();
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const [continueReading, setContinueReading] = useState<ContinueReadingState | null>(
     null,
   );
   const [streak, setStreak] = useState(0);
   const [weekRev, setWeekRev] = useState(0);
 
-  const quietLine = useMemo(
-    () => QUIET_LINES[Math.floor(Date.now() / 60_000) % QUIET_LINES.length],
-    [tick],
-  );
+  const quietLine =
+    QUIET_LINES[Math.floor(Date.now() / 60_000) % QUIET_LINES.length];
 
   useFocusEffect(
     useCallback(() => {
@@ -100,11 +100,10 @@ function TodayScreenInner() {
     return () => clearInterval(id);
   }, []);
 
-  const nextMs = useMemo(() => {
-    if (!data || !("ok" in data) || !data.ok || !data.schedule.nextAtEpochMs)
-      return null;
-    return data.schedule.nextAtEpochMs - Date.now();
-  }, [data, tick]);
+  const nextMs =
+    data && "ok" in data && data.ok && data.schedule.nextAtEpochMs
+      ? data.schedule.nextAtEpochMs - Date.now()
+      : null;
 
   const prayerOk = Boolean(data && "ok" in data && data.ok);
 
@@ -131,15 +130,7 @@ function TodayScreenInner() {
               <Ionicons name="flame" size={18} color={bronze} />
               <Text style={styles.streakNum}>{streak}</Text>
             </View>
-            <Pressable
-              onPress={() => router.push(SETTINGS_PROFILE_ROUTE)}
-              style={styles.settingsIconBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Open settings"
-              hitSlop={8}
-            >
-              <Ionicons name="settings-outline" size={24} color={emerald} />
-            </Pressable>
+            <SettingsGearButton href={SETTINGS_PROFILE_ROUTE} />
           </View>
         </View>
 
@@ -179,6 +170,18 @@ function TodayScreenInner() {
         ) : (
           <TodayPrayerHero data={data} nextCountdownMs={nextMs} />
         )}
+
+        {prayerOk ? (
+          <NextPrayerCard
+            showFallback={false}
+            data={
+              data && "ok" in data && data.ok
+                ? data
+                : undefined
+            }
+            onManageReminders={() => router.push("/(tabs)/prayer")}
+          />
+        ) : null}
 
         {prayerOk ? (
           <Text style={styles.pullHint}>
@@ -226,7 +229,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: ink,
   },
-  settingsIconBtn: { padding: 4 },
   prayerSlot: { paddingVertical: spacing.sm, alignItems: "stretch", gap: spacing.sm },
   loadingHint: {
     fontSize: fontSizes.sm,

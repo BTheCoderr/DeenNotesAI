@@ -9,11 +9,11 @@ import type { ChapterVersesResponse } from "../../src/api/types";
 import { QuranSurahReader } from "../../src/components/quran/QuranSurahReader";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { usePremium } from "../../src/hooks/usePremium";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import { readContinueReading } from "../../src/lib/quran-continue-reading";
 import { safeBack } from "../../src/lib/navigation/safe-back";
 import { readCachedChapterVerses } from "../../src/lib/quran-offline-cache";
 import {
-  emerald,
   fontSerifHeading,
   fontSizes,
   ink,
@@ -22,14 +22,50 @@ import {
   spacing,
   stone,
 } from "../../src/theme";
+import type { QuranReadingModeId } from "../../src/types/quran-reading";
+
+const READER_MODE_LABELS: Record<QuranReadingModeId, string> = {
+  singleAyah: "Guided • single ayah",
+  ayahRange: "Guided • ayah range",
+  fullSurah: "Full surah pace",
+  juz: "Juz-guided window",
+  continueReading: "Continuing where you softened your pace",
+  fullQuran: "Whole Qur’an • one surah after another",
+};
+
+const MODE_IDS = new Set<string>([
+  "singleAyah",
+  "ayahRange",
+  "fullSurah",
+  "juz",
+  "continueReading",
+  "fullQuran",
+]);
+
+function coerceParam(raw: string | string[] | undefined): string | undefined {
+  if (typeof raw === "string") return raw;
+  return Array.isArray(raw) ? raw[0] : undefined;
+}
+
+function parseReadingMode(raw: string | string[] | undefined): QuranReadingModeId | null {
+  const s = coerceParam(raw)?.trim();
+  return s && MODE_IDS.has(s) ? (s as QuranReadingModeId) : null;
+}
 
 function QuranReaderRouteInner() {
-  const { surah } = useLocalSearchParams<{ surah: string }>();
+  const { surah: surahRaw, ayahStart: ayahStartRawQ, ayahEnd: ayahEndRawQ, mode: modeRaw } =
+    useLocalSearchParams<{
+      surah: string | string[];
+      ayahStart?: string | string[];
+      ayahEnd?: string | string[];
+      mode?: string | string[];
+    }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
-  const offlineAudioUnlocked = !purchasesAvailable || isPremium;
-  const sidRaw = Array.isArray(surah) ? surah[0] : surah;
+  const { openPaywall } = usePremium();
+  const { canUseOfflineQuranAudio } = usePremiumFeatureFlags();
+  const offlineAudioUnlocked = canUseOfflineQuranAudio;
+  const sidRaw = coerceParam(surahRaw);
   const chapterNum = Number(sidRaw);
   const chapterId =
     Number.isFinite(chapterNum) && chapterNum >= 1 && chapterNum <= 114
@@ -41,6 +77,40 @@ function QuranReaderRouteInner() {
     () => chData?.chapters.find((c) => c.id === chapterId),
     [chData?.chapters, chapterId],
   );
+
+  const readingModeParsed = useMemo(() => parseReadingMode(modeRaw), [modeRaw]);
+
+  const ayahStartQ = useMemo(() => {
+    const raw = coerceParam(ayahStartRawQ);
+    if (raw == null) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(1, Math.trunc(n)) : null;
+  }, [ayahStartRawQ]);
+
+  const ayahEndQ = useMemo(() => {
+    const raw = coerceParam(ayahEndRawQ);
+    if (raw == null) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(1, Math.trunc(n)) : null;
+  }, [ayahEndRawQ]);
+
+  const ayahRange = useMemo(() => {
+    if (readingModeParsed === "singleAyah" && ayahStartQ != null) {
+      return { start: ayahStartQ, end: ayahStartQ };
+    }
+    if (ayahStartQ != null) {
+      if (ayahEndQ != null) return { start: ayahStartQ, end: Math.max(ayahStartQ, ayahEndQ) };
+      return { start: ayahStartQ };
+    }
+    if (ayahEndQ != null) return { start: 1, end: ayahEndQ };
+    return null;
+  }, [ayahStartQ, ayahEndQ, readingModeParsed]);
+
+  const readingModeLabel = useMemo(() => {
+    if (readingModeParsed) return READER_MODE_LABELS[readingModeParsed];
+    if (ayahRange) return "Guided verses";
+    return null;
+  }, [readingModeParsed, ayahRange]);
 
   const versesQ = useChapterVerses(chapterId);
 
@@ -54,11 +124,15 @@ function QuranReaderRouteInner() {
 
   useEffect(() => {
     if (chapterId == null) return;
+    if (ayahStartQ != null) {
+      setResumeAyah(ayahStartQ);
+      return;
+    }
     void readContinueReading().then((c) => {
       if (c?.surahId === chapterId) setResumeAyah(c.ayah);
       else setResumeAyah(null);
     });
-  }, [chapterId]);
+  }, [chapterId, ayahStartQ]);
 
   const effectiveVersesPayload = versesQ.data?.verses?.length
     ? versesQ.data
@@ -97,6 +171,9 @@ function QuranReaderRouteInner() {
       showOfflineRibbon={showOfflineRibbon}
       offlineAudioUnlocked={offlineAudioUnlocked}
       onRequestOfflineAudioPremium={() => openPaywall("offline_quran_audio")}
+      ayahRange={ayahRange}
+      readingMode={readingModeParsed}
+      readingModeLabel={readingModeLabel}
     />
   );
 }

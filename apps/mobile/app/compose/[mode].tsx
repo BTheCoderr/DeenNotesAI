@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,6 +23,7 @@ import type { KhutbahRecordingMeta } from "../../src/contracts/khutbah-recording
 import { NOTE_MODE_CONTRACTS } from "../../src/contracts/note-modes";
 import type { NoteModeId } from "../../src/contracts/note-modes";
 import { DEENNOTES_SAFETY_DISCLAIMER } from "../../src/contracts/safety-copy";
+import { COPY_REFLECTION_SAVING_UNAVAILABLE } from "../../src/contracts/review-user-copy";
 import { logFirstReflectionSavedOnce } from "../../src/lib/analytics/first-reflection-once";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
 import { usePremium } from "../../src/hooks/usePremium";
@@ -51,7 +52,12 @@ import {
 const IDS = new Set(NOTE_MODE_CONTRACTS.map((m) => m.id));
 
 function ComposeModeScreen() {
-  const params = useLocalSearchParams<{ mode?: string | string[]; recordingId?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    mode?: string | string[];
+    recordingId?: string | string[];
+    surah?: string | string[];
+    ayah?: string | string[];
+  }>();
   const router = useRouter();
   const navigation = useNavigation();
   const qc = useQueryClient();
@@ -67,6 +73,9 @@ function ComposeModeScreen() {
       ? recordingParamRaw.trim()
       : null;
 
+  const seedSurahRaw = Array.isArray(params.surah) ? params.surah[0] : params.surah;
+  const seedAyahRaw = Array.isArray(params.ayah) ? params.ayah[0] : params.ayah;
+
   const raw = rawMode;
   const valid = raw && IDS.has(raw as NoteModeId);
   const id = valid ? (raw as NoteModeId) : null;
@@ -78,6 +87,7 @@ function ComposeModeScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [khLoading, setKhLoading] = useState(false);
   const [khMeta, setKhMeta] = useState<KhutbahRecordingMeta | null>(null);
+  const quranDraftSeededRef = useRef(false);
 
   useEffect(() => {
     if (id !== "record_khutbah") {
@@ -101,6 +111,15 @@ function ComposeModeScreen() {
       cancelled = true;
     };
   }, [id, recordingIdResolved]);
+
+  useEffect(() => {
+    if (id !== "quran_reflection" || quranDraftSeededRef.current) return;
+    const s = Number(seedSurahRaw);
+    const a = Number(seedAyahRaw);
+    if (!Number.isFinite(s) || s < 1 || !Number.isFinite(a) || a < 1) return;
+    setDraft(`Reflection — Surah ${Math.trunc(s)}, Ayah ${Math.trunc(a)}\n\n`);
+    quranDraftSeededRef.current = true;
+  }, [id, seedAyahRaw, seedSurahRaw]);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: meta?.label ?? "Compose" });
@@ -130,7 +149,11 @@ function ComposeModeScreen() {
     }
 
     const token = session.accessToken;
-    if (!token || !supabase) {
+    if (!supabase) {
+      setErr(COPY_REFLECTION_SAVING_UNAVAILABLE);
+      return;
+    }
+    if (!token) {
       setErr("Sign in on this device so your reflection saves to your account.");
       return;
     }
@@ -205,10 +228,13 @@ function ComposeModeScreen() {
               </Text>
             </>
           ) : !supabase ? (
-            <Text style={styles.body}>
-              Reflection saving needs EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in this
-              build.
-            </Text>
+            <>
+              <Text style={styles.body}>{COPY_REFLECTION_SAVING_UNAVAILABLE}</Text>
+              <Text style={styles.body}>
+                You can continue drafting reflections locally elsewhere in the app; saving to your account will work
+                when this feature is enabled again for your build.
+              </Text>
+            </>
           ) : !session.accessToken ? (
             <>
               <Text style={styles.body}>

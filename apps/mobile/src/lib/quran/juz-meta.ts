@@ -45,3 +45,11 @@ export function estimateJuz(surah: number, ayah: number): number {
   }
   return j;
 }
+
+/** Canonical first verse of each jūz (1–30) for guided reading hubs. */
+export function getJuzFirstAyah(juz: number): { surah: number; ayah: number } | null {
+  const j = Math.min(30, Math.max(1, Math.trunc(juz)));
+  const p = POINTS.find((row) => row.juz === j);
+  if (!p) return null;
+  return { surah: p.surah, ayah: p.ayah };
+}

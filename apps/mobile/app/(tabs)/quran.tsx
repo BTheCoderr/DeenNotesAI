@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useChapters } from "../../src/api/hooks/useChapters";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { CalmPulseBlock } from "../../src/components/skeleton/CalmSkeleton";
+import { SettingsGearButton } from "../../src/components/settings/SettingsGearButton";
 import { useQuranPlayback } from "../../src/context/QuranPlaybackContext";
 import {
   prefetchAyahWindow,
@@ -23,7 +24,8 @@ import {
 } from "../../src/lib/quran-continue-reading";
 import { readMobileQuranPrefs } from "../../src/lib/mobile-quran-prefs";
 import { offlineReflectionSubtitle } from "../../src/lib/quran-meta";
-import { usePremium } from "../../src/hooks/usePremium";
+import { QURAN_PREFERENCES_ROUTE, SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import type { Chapter } from "../../src/api/types";
 import { FALLBACK_MOBILE_RECITER_ID } from "../../src/api/quran";
 import {
@@ -42,8 +44,8 @@ import {
 
 function QuranSurahListScreen() {
   const router = useRouter();
-  const { isPremium, purchasesAvailable } = usePremium();
-  const offlineAudioPrefsUnlocked = !purchasesAvailable || isPremium;
+  const { canUseOfflineQuranAudio } = usePremiumFeatureFlags();
+  const offlineAudioPrefsUnlocked = canUseOfflineQuranAudio;
   const { data, isLoading, error, isOfflineListFallback } = useChapters();
   const playback = useQuranPlayback();
   const playbackReserve = playback.hasActiveMiniStrip ? 132 : 0;
@@ -51,7 +53,7 @@ function QuranSurahListScreen() {
   const [q, setQ] = useState("");
   const [cont, setCont] = useState<ContinueReadingState | null>(null);
 
-  const chapters = data?.chapters ?? [];
+  const chapters = useMemo(() => data?.chapters ?? [], [data?.chapters]);
   const subtitle = offlineReflectionSubtitle(data?.meta ?? null);
   const hasChaptersList = chapters.length > 0;
 
@@ -116,9 +118,20 @@ function QuranSurahListScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <View style={styles.topRow}>
         <Text style={styles.h1}>Quran</Text>
-        <Pressable onPress={() => router.push("/quran/settings")} style={styles.settingsLink}>
-          <Text style={styles.settingsTxt}>Settings</Text>
-        </Pressable>
+        <View style={styles.topLinks}>
+          <Pressable onPress={() => router.push("/quran/reading")} style={styles.secondaryLink}>
+            <Text style={styles.secondaryTxt}>Modes</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push(QURAN_PREFERENCES_ROUTE)}
+            style={styles.secondaryLink}
+            accessibilityRole="button"
+            accessibilityLabel="Quran preferences"
+          >
+            <Text style={styles.secondaryTxt}>Quran preferences</Text>
+          </Pressable>
+          <SettingsGearButton href={SETTINGS_PROFILE_ROUTE} accessibilityLabel="Settings" />
+        </View>
       </View>
       {subtitle ? <Text style={styles.note}>{subtitle}</Text> : null}
       {isOfflineListFallback ? (
@@ -130,7 +143,9 @@ function QuranSurahListScreen() {
       {cont ? (
         <Pressable
           style={styles.contCard}
-          onPress={() => router.push(`/quran/${cont.surahId}`)}
+          onPress={() =>
+            router.push(`/quran/${cont.surahId}?ayahStart=${cont.ayah}&mode=continueReading`)
+          }
         >
           <Text style={styles.contK}>Continue reading</Text>
           <Text style={styles.contTitle}>
@@ -224,14 +239,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.xs,
   },
+  topLinks: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  secondaryLink: { paddingVertical: 8, paddingHorizontal: 6 },
+  secondaryTxt: { color: ink, fontWeight: "700", fontSize: fontSizes.sm },
   h1: {
     fontFamily: fontSerifHeading,
     fontSize: 28,
     fontWeight: "600",
     color: ink,
   },
-  settingsLink: { paddingVertical: 8, paddingHorizontal: 4 },
-  settingsTxt: { color: emerald, fontWeight: "800", fontSize: fontSizes.sm },
   note: { fontSize: fontSizes.xs, color: muted, marginBottom: spacing.sm, lineHeight: 18 },
   offlineRibbon: {
     fontSize: fontSizes.sm,

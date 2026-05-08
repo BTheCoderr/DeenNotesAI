@@ -21,6 +21,7 @@ import type { KhutbahRecordingMeta } from "../../src/contracts/khutbah-recording
 import { labelForNoteType } from "../../src/contracts/note-types";
 import { useMobileSession } from "../../src/hooks/useMobileSession";
 import { usePremium } from "../../src/hooks/usePremium";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import { formatQuranRefs, useStringLines } from "../../src/lib/note-display";
 import { findRecordingForReflection } from "../../src/lib/khutbah-recordings-storage";
 import { readReflectionLibrary, type ReflectionLibraryItem } from "../../src/lib/reflection-library";
@@ -117,9 +118,9 @@ function NoteDetailScreen() {
   const {
     openPaywall,
     isHydrated,
-    isPremium,
     purchasesAvailable,
   } = usePremium();
+  const { canUseReflectionMemory } = usePremiumFeatureFlags();
   const nid = Array.isArray(id) ? id[0] : id;
 
   const [localLib, setLocalLib] = useState<ReflectionLibraryItem[]>([]);
@@ -137,7 +138,7 @@ function NoteDetailScreen() {
   }, [nid]);
 
   const hasSignedIn = Boolean(auth.ready && supabase && auth.accessToken);
-  const cloudSyncAllowed = !purchasesAvailable || isPremium;
+  const cloudSyncAllowed = canUseReflectionMemory;
   const noteQuery = useDeenNote(nid, hasSignedIn && cloudSyncAllowed);
   const localItem = nid ? localLib.find((x) => x.id === nid) : undefined;
 
@@ -178,7 +179,7 @@ function NoteDetailScreen() {
     hasSignedIn &&
     purchasesAvailable &&
     isHydrated &&
-    !isPremium &&
+    !canUseReflectionMemory &&
     nid &&
     !localItem
   ) {

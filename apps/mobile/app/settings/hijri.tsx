@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePremium } from "../../src/hooks/usePremium";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import {
   cardBg,
   emerald,
@@ -17,8 +18,9 @@ import {
 
 export default function HijriRamadanSettingsScreen() {
   const router = useRouter();
-  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
-  const unlocked = !purchasesAvailable || isPremium;
+  const { openPaywall } = usePremium();
+  const { canUseRamadanPlannerSurfaces } = usePremiumFeatureFlags();
+  const unlocked = canUseRamadanPlannerSurfaces;
 
   if (!unlocked) {
     return (

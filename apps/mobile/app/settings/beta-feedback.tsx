@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
@@ -37,12 +37,23 @@ const CATEGORIES = [
   "Something else gently",
 ] as const;
 
+const FEEDBACK_INBOX_MISSING_HINT =
+  "Beta feedback inbox is not configured for this build. Configure a feedback recipient before distributing to testers.";
+const MAIL_NEEDS_CONTACT = "Add your email address so we can reply with care.";
+
 export default function BetaFeedbackScreen() {
   const router = useRouter();
   const inbox = resolveBetaFeedbackInboxEmail();
   const [email, setEmail] = useState("");
   const [selected, setSelected] = useState<Set<(typeof CATEGORIES)[number]>>(new Set());
   const [notes, setNotes] = useState("");
+
+  /** Production builds redirect away immediately (surface is developer-only). */
+  useLayoutEffect(() => {
+    if (!__DEV__) {
+      router.replace("/settings");
+    }
+  }, [router]);
 
   const toggle = useCallback((cat: (typeof CATEGORIES)[number]) => {
     setSelected((prev) => {
@@ -73,13 +84,15 @@ export default function BetaFeedbackScreen() {
     return lines.join("\n");
   }, [email, notes, selected]);
 
+  if (!__DEV__) {
+    return null;
+  }
+
   function openComposer() {
     if (!canSend) {
       Alert.alert(
-        "Needs a reachable inbox",
-        inbox
-          ? "Add your email address so we can reply with care."
-          : "Set EXPO_PUBLIC_BETA_FEEDBACK_EMAIL or NEXT_PUBLIC_BETA_FEEDBACK_EMAIL in your build.",
+        "Needs attention",
+        inbox ? MAIL_NEEDS_CONTACT : FEEDBACK_INBOX_MISSING_HINT,
       );
       return;
     }
@@ -164,9 +177,7 @@ export default function BetaFeedbackScreen() {
           />
         </View>
 
-        {!inbox ? (
-          <Text style={styles.warn}>Inbox missing in this build — set EXPO_PUBLIC_BETA_FEEDBACK_EMAIL for testers.</Text>
-        ) : null}
+        {!inbox ? <Text style={styles.warn}>{FEEDBACK_INBOX_MISSING_HINT}</Text> : null}
 
         <Pressable
           style={[styles.cta, !canSend && styles.ctaMuted]}
@@ -230,7 +241,7 @@ const styles = StyleSheet.create({
   tagOn: { borderColor: emerald, backgroundColor: "rgba(18,122,99,0.1)" },
   tagTxt: { fontSize: fontSizes.sm, color: ink, fontWeight: "600" },
   tagTxtOn: { color: emerald },
-  warn: { fontSize: fontSizes.sm, color: "#b45309", lineHeight: 20 },
+  warn: { fontSize: fontSizes.sm, color: muted, fontWeight: "700", lineHeight: 20 },
   cta: {
     backgroundColor: emerald,
     borderRadius: radii.pill,

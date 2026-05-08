@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Ionicons } from "@expo/vector-icons";
 
 import { FALLBACK_MOBILE_RECITER_ID, fetchRecitations } from "../../src/api/quran";
 import { CalmPulseBlock } from "../../src/components/skeleton/CalmSkeleton";
 import { REFLECTION_LANGUAGE_OPTIONS } from "../../src/contracts/quran-preferences";
 import type { QuranPreferenceContract, ReflectionLanguageCode } from "../../src/contracts/quran-preferences";
 import { usePremium } from "../../src/hooks/usePremium";
+import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import {
   readMobileQuranPrefs,
   writeMobileQuranPrefs,
@@ -34,8 +38,10 @@ import {
 } from "../../src/theme";
 
 export default function QuranSettingsScreen() {
-  const { isPremium, purchasesAvailable, openPaywall } = usePremium();
-  const offlineDownloadsUnlocked = !purchasesAvailable || isPremium;
+  const router = useRouter();
+  const { openPaywall } = usePremium();
+  const { canUseOfflineQuranAudio } = usePremiumFeatureFlags();
+  const offlineDownloadsUnlocked = canUseOfflineQuranAudio;
   const ramadanReadingUnlocked = offlineDownloadsUnlocked;
   const [loading, setLoading] = useState(true);
   const [prefs, setPrefs] = useState<QuranPreferenceContract | null>(null);
@@ -111,7 +117,7 @@ export default function QuranSettingsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.h1}>Quran settings</Text>
+        <Text style={styles.h1}>Quran Preferences</Text>
         <Text style={styles.lead}>
           Local, calm preferences for reading and listening. Verse caching also lives under Offline
           reading in Settings.
@@ -319,6 +325,22 @@ export default function QuranSettingsScreen() {
             Mirrors the server bundle you last fetched online — resource pickers will align with web when signed in.
           </Text>
         </View>
+
+        <Pressable
+          style={styles.offlinePointer}
+          onPress={() => router.push("/settings/offline")}
+          accessibilityRole="button"
+          accessibilityLabel="Offline reading in Settings"
+          accessibilityHint="Opens offline Quran cache settings"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.offlinePointerTitle}>Offline reading & verse cache</Text>
+            <Text style={styles.offlinePointerSub}>
+              Adjust cached surahs and storage limits in Settings
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={muted} />
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -394,4 +416,17 @@ const styles = StyleSheet.create({
     color: ink,
     marginTop: 4,
   },
+  offlinePointer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: border,
+    backgroundColor: cardBg,
+  },
+  offlinePointerTitle: { fontSize: fontSizes.md, fontWeight: "700", color: ink },
+  offlinePointerSub: { fontSize: fontSizes.xs, color: muted, marginTop: 4, lineHeight: 18 },
 });

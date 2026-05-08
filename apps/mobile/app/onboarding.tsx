@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { MobileWordmark } from "../src/components/brand/MobileWordmark";
+import { DeenNotesAppIconMark } from "../src/components/brand/DeenNotesAppIconMark";
 import {
   ONBOARDING_INTENTIONS,
   ONBOARDING_STEPS,
@@ -95,7 +95,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <MobileWordmark height={30} padded style={{ alignSelf: "flex-start", marginBottom: spacing.sm }} />
+        <DeenNotesAppIconMark size={40} style={{ alignSelf: "flex-start", marginBottom: spacing.md }} />
         <Text style={styles.dots}>
           {stepIndex + 1} / {ONBOARDING_STEPS.length}
         </Text>

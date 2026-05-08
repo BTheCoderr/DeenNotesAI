@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "start:dev": "expo start --dev-client",
     "start:clear": "expo start --clear",
     "mobile:clear": "expo start --clear",
     "icons": "node ../../scripts/export-mobile-brand-icons.cjs",
@@ -47,6 +48,7 @@
   "devDependencies": {
     "@types/react": "~19.1.10",
     "dotenv": "^16.4.5",
+    "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
   },
   "private": true,

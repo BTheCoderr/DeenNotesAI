@@ -2,7 +2,7 @@ import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ContinueReadingState } from "../../lib/quran-continue-reading";
-import { border, bronze, cardBg, emerald, fontSerifHeading, fontSizes, ink, muted, radii, spacing } from "../../theme";
+import { border, cardBg, emerald, fontSerifHeading, fontSizes, ink, muted, radii, spacing } from "../../theme";
 
 type Props = {
   state: ContinueReadingState | null;

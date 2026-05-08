@@ -1,5 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Audio, AVPlaybackStatus } from "expo-av";
+import {
+  Audio,
+  AVPlaybackStatus,
+  InterruptionModeAndroid,
+  InterruptionModeIOS,
+} from "expo-av";
 import {
   createContext,
   useCallback,
@@ -10,10 +15,25 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  AppState,
+  type AppStateStatus,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FALLBACK_MOBILE_RECITER_ID, fetchVerseAudio } from "../api/quran";
+import {
+  logAppStateTransition,
+  logAudioModeApplied,
+  logPlaybackStatusTransition,
+  logRuntimeEnvironmentOnce,
+  logUnload,
+} from "../lib/quran/quran-playback-diagnostics";
 import { mobileTabFloatingBottomOffset } from "../lib/layout/tab-bar";
 import { logProductEvent } from "../lib/analytics/mobile-product-events";
 import { getAudioCacheRow } from "../lib/quran/audio-cache";
@@ -24,6 +44,7 @@ import {
   type LastRecitationPersisted,
 } from "../lib/quran/last-recitation-storage";
 import { readMobileQuranPrefs } from "../lib/mobile-quran-prefs";
+import { readRecitersSnapshot } from "../lib/reciters-snapshot-storage";
 import {
   border,
   bronze,
@@ -47,6 +68,9 @@ type PlayArgs = {
   chapterTitle?: string;
 };
 
+const FRIENDLY_PLAYBACK_UNAVAILABLE =
+  "Could not play this recitation. Check your connection and try again.";
+
 export type QuranPlaybackCtx = {
   reciterIdEffective: string;
   playVerse: (args: PlayArgs) => Promise<void>;
@@ -57,11 +81,15 @@ export type QuranPlaybackCtx = {
   prevVerse: () => Promise<void>;
   busy: boolean;
   playing: boolean;
+  /** User-facing playback failure (bad URL / lost network buffer / load error). Cleared on new play/stop. */
+  playbackError: string | null;
+  clearPlaybackError: () => void;
   current: null | {
     surahId: number;
     ayah: number;
     verseCount: number;
     chapterTitle?: string;
+    reciterLabel?: string;
   };
   /** True when the floating mini strip should reserve list space (playing / paused with an active track). */
   hasActiveMiniStrip: boolean;
@@ -73,14 +101,36 @@ export type QuranPlaybackCtx = {
 
 const Ctx = createContext<QuranPlaybackCtx | null>(null);
 
-async function applyQuranAudioSession() {
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: false,
-    playsInSilentModeIOS: true,
-    staysActiveInBackground: true,
-    shouldDuckAndroid: true,
-    playThroughEarpieceAndroid: false,
-  });
+async function resolveReciterDisplayName(reciterId: string): Promise<string | undefined> {
+  const snap = await readRecitersSnapshot();
+  if (!snap?.items?.length) return undefined;
+  const num = Number(reciterId);
+  const row = snap.items.find((r) => r.id === num || String(r.id) === reciterId);
+  if (!row) return undefined;
+  return row.translatedName ?? row.reciterName ?? row.style;
+}
+
+/**
+ * Quran playback-only session: mic stays disabled, duck other audio on iOS, keep session alive for background playback.
+ * Requires `UIBackgroundModes` includes `audio` (see app.config.ts / app.json).
+ * Lock screen titles/artwork require MPNowPlayingInfo; expo-av does not expose that from JS yet.
+ */
+async function applyQuranAudioSession(): Promise<void> {
+  try {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+      interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    });
+    logAudioModeApplied(true);
+  } catch (e) {
+    logAudioModeApplied(false, e);
+    throw e;
+  }
 }
 
 function useDebouncedPersist(
@@ -123,14 +173,26 @@ function useDebouncedPersist(
 }
 
 export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    logRuntimeEnvironmentOnce();
+  }, []);
+
   const soundRef = useRef<Audio.Sound | null>(null);
+  const prevAppStateRef = useRef<AppStateStatus | null>(null);
+  const prevPlayingLoggedRef = useRef<boolean | null>(null);
+  const currentRef = useRef<QuranPlaybackCtx["current"]>(null);
   const reciterRef = useRef(FALLBACK_MOBILE_RECITER_ID);
   const [reciterIdEffective, setReciterIdEffective] = useState(FALLBACK_MOBILE_RECITER_ID);
   const [busy, setBusy] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [current, setCurrent] = useState<QuranPlaybackCtx["current"]>(null);
   const [miniStripDismissed, setMiniStripDismissed] = useState(false);
   const [lastHint, setLastHint] = useState<LastRecitationPersisted | null>(null);
+
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
 
   const reloadLastRecitation = useCallback(async () => {
     setLastHint(await readLastRecitation());
@@ -149,7 +211,27 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
     });
   }, [reloadLastRecitation]);
 
-  const unload = useCallback(async () => {
+  const clearPlaybackError = useCallback(() => {
+    setPlaybackError(null);
+  }, []);
+
+  useEffect(() => {
+    void applyQuranAudioSession();
+  }, []);
+
+  useEffect(() => {
+    prevAppStateRef.current = AppState.currentState;
+    const onChange = (s: AppStateStatus) => {
+      logAppStateTransition(prevAppStateRef.current, s);
+      prevAppStateRef.current = s;
+      if (s === "active") void applyQuranAudioSession();
+    };
+    const sub = AppState.addEventListener("change", onChange);
+    return () => sub.remove();
+  }, []);
+
+  const unload = useCallback(async (reason: string) => {
+    logUnload(reason);
     const s = soundRef.current;
     soundRef.current = null;
     if (s) {
@@ -171,18 +253,52 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
 
   const attachSound = useCallback(
     async (uri: string, resumeMs?: number) => {
-      await unload();
+      await unload("attachSound_replace");
       await applyQuranAudioSession();
       const initialPos = resumeMs && resumeMs > 500 ? resumeMs : 0;
+      prevPlayingLoggedRef.current = null;
       const { sound } = await Audio.Sound.createAsync(
         { uri },
         { shouldPlay: true, positionMillis: initialPos },
-        (st) => {
-          if (!st.isLoaded) return;
-          setPlaying(Boolean(st.isPlaying));
+        (st: AVPlaybackStatus) => {
+          if (!st.isLoaded) {
+            if ("error" in st && typeof st.error === "string" && st.error.length > 0) {
+              setPlaying(false);
+              setPlaybackError(FRIENDLY_PLAYBACK_UNAVAILABLE);
+              logPlaybackStatusTransition({ phase: "load_error", error: st.error });
+              const stale = soundRef.current;
+              soundRef.current = null;
+              void (async () => {
+                try {
+                  if (stale) await stale.unloadAsync();
+                } catch {
+                  /* ignore */
+                }
+              })();
+            }
+            return;
+          }
+          const playingNow = Boolean(st.isPlaying);
+          setPlaying(playingNow);
+          if (prevPlayingLoggedRef.current !== playingNow) {
+            prevPlayingLoggedRef.current = playingNow;
+            logPlaybackStatusTransition({
+              phase: "transition",
+              isPlaying: playingNow,
+              positionMillis: st.positionMillis ?? null,
+              durationMillis:
+                typeof st.durationMillis === "number" ? st.durationMillis : null,
+              shouldPlay: st.shouldPlay ?? null,
+            });
+          }
         },
       );
       soundRef.current = sound;
+      try {
+        await sound.setProgressUpdateIntervalAsync(750);
+      } catch {
+        /* ignore — progress interval is optimization only */
+      }
     },
     [unload],
   );
@@ -190,6 +306,7 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
   const playVerse = useCallback(
     async (args: PlayArgs) => {
       setMiniStripDismissed(false);
+      clearPlaybackError();
       const reciter = (args.reciterId?.trim() ||
         reciterRef.current ||
         FALLBACK_MOBILE_RECITER_ID) as string;
@@ -197,6 +314,9 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
       setReciterIdEffective(reciter);
       setBusy(true);
       try {
+        const reciterLabel =
+          (await resolveReciterDisplayName(reciter)) ?? `Reciter ${reciter}`;
+
         let resumeMs: number | undefined;
         if (args.resumeFromStorage) {
           const last = await readLastRecitation();
@@ -214,17 +334,27 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
         logProductEvent("quran_listen_start", {
           playback_source: row?.status === "ready" && row.localUri ? "cache" : "stream",
         });
-        if (row?.status === "ready" && row.localUri) {
-          await attachSound(row.localUri, resumeMs);
-        } else {
-          const meta = await fetchVerseAudio(args.surahId, args.ayah, reciter);
-          await attachSound(meta.audioUrl, resumeMs);
+        try {
+          if (row?.status === "ready" && row.localUri) {
+            await attachSound(row.localUri, resumeMs);
+          } else {
+            const meta = await fetchVerseAudio(args.surahId, args.ayah, reciter);
+            await attachSound(meta.audioUrl, resumeMs);
+          }
+        } catch {
+          setPlaybackError(FRIENDLY_PLAYBACK_UNAVAILABLE);
+          setPlaying(false);
+          setCurrent(null);
+          await unload("playVerse_failed");
+          return;
         }
+
         setCurrent({
           surahId: args.surahId,
           ayah: args.ayah,
           verseCount: args.verseCount,
           chapterTitle: args.chapterTitle,
+          reciterLabel,
         });
         void writeLastRecitation({
           reciterId: reciter,
@@ -239,7 +369,7 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
         setBusy(false);
       }
     },
-    [attachSound, reloadLastRecitation],
+    [attachSound, clearPlaybackError, reloadLastRecitation, unload],
   );
 
   const pause = useCallback(async () => {
@@ -251,19 +381,37 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
 
   const resume = useCallback(async () => {
     setMiniStripDismissed(false);
+    clearPlaybackError();
     const s = soundRef.current;
-    if (!s) return;
-    await s.playAsync();
-  }, []);
+    if (!s) {
+      const c = currentRef.current;
+      if (c)
+        await playVerse({
+          surahId: c.surahId,
+          ayah: c.ayah,
+          verseCount: c.verseCount,
+          chapterTitle: c.chapterTitle,
+          reciterId: reciterIdEffective,
+        });
+      return;
+    }
+    try {
+      await applyQuranAudioSession();
+      await s.playAsync();
+    } catch {
+      setPlaybackError(FRIENDLY_PLAYBACK_UNAVAILABLE);
+    }
+  }, [clearPlaybackError, playVerse, reciterIdEffective]);
 
   const stop = useCallback(async () => {
     setPlaying(false);
     setCurrent(null);
     setMiniStripDismissed(false);
-    await unload();
+    clearPlaybackError();
+    await unload("user_stop");
     void clearLastRecitation();
     void reloadLastRecitation();
-  }, [unload, reloadLastRecitation]);
+  }, [unload, reloadLastRecitation, clearPlaybackError]);
 
   const nextVerse = useCallback(async () => {
     if (!current) return;
@@ -300,6 +448,8 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
       prevVerse,
       busy,
       playing,
+      playbackError,
+      clearPlaybackError,
       current,
       hasActiveMiniStrip,
       dismissMiniStrip,
@@ -316,6 +466,8 @@ export function QuranPlaybackProvider({ children }: { children: ReactNode }) {
       prevVerse,
       busy,
       playing,
+      playbackError,
+      clearPlaybackError,
       current,
       hasActiveMiniStrip,
       dismissMiniStrip,
@@ -357,6 +509,7 @@ function QuranMiniPlayerStrip() {
     prevVerse,
     hasActiveMiniStrip,
     dismissMiniStrip,
+    playbackError,
   } = v;
 
   if (!current || !hasActiveMiniStrip) return null;
@@ -374,6 +527,11 @@ function QuranMiniPlayerStrip() {
             <Text style={stripStyles.miniT} numberOfLines={1}>
               Ayah {current.ayah} of {current.verseCount}
             </Text>
+            {current.reciterLabel ? (
+              <Text style={stripStyles.miniReciter} numberOfLines={1}>
+                {current.reciterLabel}
+              </Text>
+            ) : null}
           </View>
           <View style={stripStyles.headRight}>
             {busy ? <ActivityIndicator color={emerald} size="small" /> : null}
@@ -388,7 +546,15 @@ function QuranMiniPlayerStrip() {
             </Pressable>
           </View>
         </View>
-        <Text style={stripStyles.miniS}>Recitation continues when supported.</Text>
+        {playbackError ? (
+          <Text style={stripStyles.miniErr} accessibilityRole="alert">
+            {playbackError}
+          </Text>
+        ) : (
+          <Text style={stripStyles.miniS}>
+            Recitation keeps playing while you browse other apps or lock your device — pause or stop from here anytime.
+          </Text>
+        )}
 
         <View style={stripStyles.ctrlRow}>
           <Pressable
@@ -457,7 +623,14 @@ const stripStyles = StyleSheet.create({
   },
   miniK: { fontSize: fontSizes.xs, fontWeight: "800", color: bronze },
   miniT: { fontSize: fontSizes.sm, fontWeight: "700", color: ink },
+  miniReciter: {
+    marginTop: 2,
+    fontSize: fontSizes.xs,
+    fontWeight: "600",
+    color: muted,
+  },
   miniS: { fontSize: fontSizes.xs, color: muted, lineHeight: 17 },
+  miniErr: { fontSize: fontSizes.xs, color: ink, lineHeight: 17, fontWeight: "700" },
   ctrlRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   ctrlBtn: {
     paddingVertical: 6,

@@ -19,7 +19,7 @@ Loaded via `apps/mobile/app.config.ts` and `src/lib/purchases/expo-extra.ts`:
 
 - `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` — **required** for native iOS subscriptions.
 - `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_PREMIUM` — optional override.
-- `EXPO_PUBLIC_APP_TERMS_URL`, `EXPO_PUBLIC_APP_PRIVACY_URL` — optional (defaults: `https://deennotes.ai/terms`, `https://deennotes.ai/privacy`).
+- `EXPO_PUBLIC_APP_TERMS_URL`, `EXPO_PUBLIC_APP_PRIVACY_URL` — optional (defaults match production: `https://deennotesai.netlify.app/terms`, `https://deennotesai.netlify.app/privacy`).
 
 ## RevenueCat dashboard (checklist)
 
