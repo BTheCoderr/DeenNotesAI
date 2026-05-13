@@ -7,7 +7,12 @@
  */
 import "server-only";
 
-import type { ChapterDto, VerseAudioDto, VerseDto } from "./types";
+import type { ChapterDto, TranslationLine, VerseAudioDto, VerseDto } from "./types";
+import {
+  indexUthmaniByVerseKey,
+  zipChapterTranslationsOrdered,
+  type TranslationRow as ZipTranslationRow,
+} from "./quranDotComVerses.merge";
 import { parseVerseKeyString } from "./verses";
 
 export const QURAN_DOTCOM_API_V4 = "https://api.quran.com/api/v4";
@@ -33,14 +38,20 @@ type DotComChapterRow = {
 type DotComTranslationRow = {
   resource_id?: number;
   text?: string;
+  resource_name?: string;
+  language_name?: string;
+  resourceName?: string;
+  languageName?: string;
 };
 
 type DotComVerseRow = {
   id: number;
   verse_number: number;
   verse_key: string;
+  chapter_id?: number;
   text_uthmani?: string | null;
   text_imlaei?: string | null;
+  text_uthmani_simple?: string | null;
   page_number?: number;
   juz_number?: number;
   translations?: DotComTranslationRow[] | null;
@@ -55,6 +66,220 @@ async function fetchJson<T>(url: string): Promise<T> {
     throw new Error(`quran_dotcom_http_${res.status}`);
   }
   return res.json() as Promise<T>;
+}
+
+async function fetchJsonQuiet<T>(url: string): Promise<T | null> {
+  try {
+    return await fetchJson<T>(url);
+  } catch {
+    return null;
+  }
+}
+
+function mapDotComTranslations(
+  rows: DotComTranslationRow[] | null | undefined,
+): TranslationLine[] {
+  const out: TranslationLine[] = [];
+  for (const t of rows ?? []) {
+    const text = typeof t.text === "string" ? t.text.trim() : "";
+    if (!text.length) continue;
+
+    const resourceNameRaw =
+      typeof t.resource_name === "string"
+        ? t.resource_name.trim()
+        : typeof t.resourceName === "string"
+          ? t.resourceName.trim()
+          : undefined;
+
+    const languageNameRaw =
+      typeof t.language_name === "string"
+        ? t.language_name.trim()
+        : typeof t.languageName === "string"
+          ? t.languageName.trim()
+          : undefined;
+
+    out.push({
+      text,
+      resourceId: t.resource_id,
+      resourceName: resourceNameRaw,
+      languageName: languageNameRaw,
+    });
+  }
+  return out;
+}
+
+/** Pages through `GET /verses/by_chapter/:id` (`per_page` max 50). */
+async function fetchAllVersesByChapterPrimaryPaged(
+  chapterId: number,
+  translationId: number,
+): Promise<DotComVerseRow[]> {
+  const aggregated: DotComVerseRow[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const params = new URLSearchParams({
+      language: "en",
+      words: "false",
+      fields:
+        "text_uthmani,text_imlaei,text_uthmani_simple,chapter_id",
+      page: String(page),
+      per_page: "50",
+      translations: String(translationId),
+      translation_fields: "resource_name,language_name",
+    });
+    const url = `${QURAN_DOTCOM_API_V4}/verses/by_chapter/${chapterId}?${params.toString()}`;
+    const raw = await fetchJson<{
+      verses?: DotComVerseRow[];
+      pagination?: { total_pages?: number };
+    }>(url);
+
+    const batch = raw.verses ?? [];
+    if (page === 1 && batch.length === 0) {
+      throw new Error("quran_dotcom_by_chapter_empty");
+    }
+
+    if (page === 1) {
+      const tp = raw.pagination?.total_pages;
+      totalPages = typeof tp === "number" && tp > 0 ? tp : 1;
+    }
+
+    aggregated.push(...batch);
+
+    if (batch.length === 0) break;
+
+    page += 1;
+  }
+
+  return aggregated;
+}
+
+async function fetchUthmaniTextByVerseKey(
+  chapterRouteId: number,
+): Promise<Map<string, string>> {
+  const url = `${QURAN_DOTCOM_API_V4}/quran/verses/uthmani?chapter_number=${chapterRouteId}`;
+  const raw = await fetchJsonQuiet<{
+    verses?: { verse_key?: string | null; text_uthmani?: string | null }[];
+  }>(url);
+
+  const m = indexUthmaniByVerseKey(raw?.verses ?? []);
+  const plain = new Map<string, string>();
+  for (const [k, r] of m) {
+    const t =
+      typeof r.text_uthmani === "string" ? r.text_uthmani.trim() : "";
+    if (t.length > 0) plain.set(k, t);
+  }
+  return plain;
+}
+
+async function fetchTranslationChapterFallback(
+  chapterRouteId: number,
+  translationId: number,
+): Promise<{ rows: ZipTranslationRow[]; resourceLabel?: string } | null> {
+  const url = `${QURAN_DOTCOM_API_V4}/quran/translations/${translationId}?chapter_number=${chapterRouteId}`;
+  const raw = await fetchJsonQuiet<{
+    translations?: ZipTranslationRow[];
+    meta?: { translation_name?: string };
+  }>(url);
+  const transRows = raw?.translations ?? null;
+  if (!transRows?.length) return null;
+  const resourceLabel =
+    typeof raw?.meta?.translation_name === "string"
+      ? raw.meta.translation_name.trim()
+      : undefined;
+  return { rows: transRows, resourceLabel };
+}
+
+function verseDtoFromDotComRow(
+  v: DotComVerseRow,
+  routeChapterId: number,
+): VerseDto {
+  const chapterResolved =
+    typeof v.chapter_id === "number" &&
+    Number.isFinite(v.chapter_id) &&
+    v.chapter_id >= 1 &&
+    v.chapter_id <= 114
+      ? v.chapter_id
+      : routeChapterId;
+
+  let uth =
+    typeof v.text_uthmani === "string" && v.text_uthmani.trim()
+      ? v.text_uthmani.trim()
+      : "";
+
+  if (
+    !uth.length &&
+    typeof v.text_imlaei === "string" &&
+    v.text_imlaei.trim()
+  ) {
+    uth = v.text_imlaei.trim();
+  }
+
+  if (
+    !uth.length &&
+    typeof v.text_uthmani_simple === "string" &&
+    v.text_uthmani_simple.trim()
+  ) {
+    uth = v.text_uthmani_simple.trim();
+  }
+
+  return {
+    id: v.id,
+    verseNumber: v.verse_number,
+    verseKey: typeof v.verse_key === "string" ? v.verse_key.trim() : "",
+    chapterId: chapterResolved,
+    pageNumber:
+      typeof v.page_number === "number" ? v.page_number : undefined,
+    juzNumber:
+      typeof v.juz_number === "number" ? v.juz_number : undefined,
+    textUthmani: uth,
+    textImlaei:
+      typeof v.text_imlaei === "string" && v.text_imlaei.trim()
+        ? v.text_imlaei.trim()
+        : undefined,
+    translations: mapDotComTranslations(v.translations),
+  };
+}
+
+function applyUthmaniOverlay(
+  verses: VerseDto[],
+  byKey: Map<string, string>,
+): void {
+  for (const verse of verses) {
+    if (verse.textUthmani.trim().length > 0) continue;
+    const vk = verse.verseKey.trim();
+    const t = vk.length ? byKey.get(vk) : undefined;
+    if (typeof t === "string" && t.trim().length > 0) {
+      verse.textUthmani = t.trim();
+    }
+  }
+}
+
+function applyTranslationFallback(
+  verses: VerseDto[],
+  bundle: { rows: ZipTranslationRow[]; resourceLabel?: string },
+): void {
+  const sorted = [...verses].sort((a, b) => a.verseNumber - b.verseNumber);
+  const verseNums = sorted.map((v) => v.verseNumber);
+  const mapByNum = zipChapterTranslationsOrdered(
+    verseNums,
+    bundle.rows,
+  );
+
+  for (const verse of verses) {
+    if (verse.translations.length > 0) continue;
+    const row = mapByNum.get(verse.verseNumber);
+    if (!row) continue;
+    const txt = typeof row.text === "string" ? row.text.trim() : "";
+    if (!txt.length) continue;
+
+    verse.translations.push({
+      text: txt,
+      resourceId: row.resource_id ?? undefined,
+      resourceName: bundle.resourceLabel ?? "Translation",
+      languageName: "english",
+    });
+  }
 }
 
 /** List chapters (114) from api.quran.com/v4/chapters → ChapterDto[] */
@@ -95,63 +320,46 @@ export async function fetchChaptersFromQuranDotComHttp(): Promise<ChapterDto[]> 
   return out;
 }
 
-/** Verses for one surah; `translationId` is Quran.com translation resource id. */
+/**
+ * Verses for one surah via Quran.com v4 (`/verses/by_chapter`).
+ * Uses `per_page=50`, follows `pagination.total_pages`, and falls back to
+ * `/quran/verses/uthmani` and `/quran/translations/:id` when text or translations are missing.
+ */
 export async function fetchVersesForChapterFromQuranDotComHttp(
   chapterId: number,
   translationId: number = resolvePublicTranslationIdForHttp(),
 ): Promise<VerseDto[]> {
-  const params = new URLSearchParams({
-    language: "en",
-    words: "false",
-    per_page: "300",
-    page: "1",
-    fields: "text_uthmani,text_imlaei",
-    translations: String(translationId),
-  });
-  const url = `${QURAN_DOTCOM_API_V4}/verses/by_chapter/${chapterId}?${params.toString()}`;
-  const raw = await fetchJson<{ verses?: DotComVerseRow[] }>(url);
-  const rows = raw.verses ?? [];
-  const verses: VerseDto[] = rows.map((v) => {
-    const first = v.translations?.[0];
-    const translations =
-      typeof first?.text === "string" && first.text.trim()
-        ? [
-            {
-              text: first.text.trim(),
-              resourceId: first.resource_id,
-              resourceName: "Translation",
-              languageName: "english",
-            },
-          ]
-        : [];
+  const rows = await fetchAllVersesByChapterPrimaryPaged(
+    chapterId,
+    translationId,
+  );
 
-    const uth =
-      typeof v.text_uthmani === "string" && v.text_uthmani.trim()
-        ? v.text_uthmani.trim()
-        : typeof v.text_imlaei === "string" && v.text_imlaei.trim()
-          ? v.text_imlaei.trim()
-          : "";
-
-    return {
-      id: v.id,
-      verseNumber: v.verse_number,
-      verseKey: v.verse_key,
-      chapterId,
-      pageNumber:
-        typeof v.page_number === "number" ? v.page_number : undefined,
-      juzNumber:
-        typeof v.juz_number === "number" ? v.juz_number : undefined,
-      textUthmani: uth,
-      textImlaei:
-        typeof v.text_imlaei === "string" && v.text_imlaei.trim()
-          ? v.text_imlaei.trim()
-          : undefined,
-      translations,
-    };
-  });
+  const verses = rows.map((v) =>
+    verseDtoFromDotComRow(v, chapterId),
+  );
 
   verses.sort((a, b) => a.verseNumber - b.verseNumber);
-  if (!verses.length) throw new Error("quran_dotcom_verses_empty");
+  if (!verses.length) {
+    throw new Error("quran_dotcom_verses_empty");
+  }
+
+  const needsUthmani = verses.some((v) => !v.textUthmani.trim().length);
+  if (needsUthmani) {
+    const overlay = await fetchUthmaniTextByVerseKey(chapterId);
+    applyUthmaniOverlay(verses, overlay);
+  }
+
+  const needsTranslation = verses.some((v) => v.translations.length === 0);
+  if (needsTranslation) {
+    const bundle = await fetchTranslationChapterFallback(
+      chapterId,
+      translationId,
+    );
+    if (bundle) {
+      applyTranslationFallback(verses, bundle);
+    }
+  }
+
   return verses;
 }
 

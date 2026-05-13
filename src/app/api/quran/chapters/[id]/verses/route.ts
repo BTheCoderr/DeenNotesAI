@@ -7,14 +7,10 @@ import {
   safeQuranApiSuccess,
 } from "@/app/api/quran/_shared";
 import {
-  isLiveQuranCredentialsConfigured,
-  isMockQuranMode,
-  isQuranPublicHttpBridgeEnabled,
-} from "@/lib/quran/config";
-import {
   fetchVersesForChapterFromQuranDotComHttp,
   resolvePublicTranslationIdForHttp,
 } from "@/lib/quran/quranDotComPublicFetch";
+import { isMockQuranMode } from "@/lib/quran/config";
 import { fetchVersesForChapter } from "@/lib/quran/verses";
 
 type Params = Promise<{ id: string }>;
@@ -58,34 +54,26 @@ export async function GET(request: Request, segment: { params: Params }) {
       : undefined;
 
   return guardQuranOrExecute(async () => {
-    const longCache = mergeQuranMobileHeaders("long", {
+    const sdkCacheHeaders = mergeQuranMobileHeaders("long", {
       "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+    });
+    const httpCacheHeaders = mergeQuranMobileHeaders("short", {
+      "Cache-Control":
+        "public, max-age=600, s-maxage=600, stale-while-revalidate=86400",
     });
 
     try {
-      if (isMockQuranMode() || isLiveQuranCredentialsConfigured()) {
+      if (isMockQuranMode()) {
         const verses = await fetchVersesForChapter(n, optsSdk);
-        return safeQuranApiSuccess({ verses }, { headers: longCache });
+        return safeQuranApiSuccess({ verses }, { headers: sdkCacheHeaders });
       }
 
-      if (isQuranPublicHttpBridgeEnabled()) {
-        const verses = await fetchVersesForChapterFromQuranDotComHttp(
-          n,
-          publicTranslationId,
-        );
-        return safeQuranApiSuccess(
-          { verses },
-          {
-            headers: mergeQuranMobileHeaders("short", {
-              "Cache-Control":
-                "public, max-age=600, s-maxage=600, stale-while-revalidate=86400",
-            }),
-          },
-        );
-      }
+      const verses = await fetchVersesForChapterFromQuranDotComHttp(
+        n,
+        publicTranslationId,
+      );
 
-      const verses = await fetchVersesForChapter(n, optsSdk);
-      return safeQuranApiSuccess({ verses }, { headers: longCache });
+      return safeQuranApiSuccess({ verses }, { headers: httpCacheHeaders });
     } catch {
       return safeQuranApiFailure(
         {

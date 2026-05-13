@@ -11,20 +11,29 @@ The Next.js app lives at the **repository root** (`package.json`, `next.config.*
 | `GET` | `/api/quran/audio` | Resolved CDN mp3 URL for one ayah. |
 | `OPTIONS` | Same as above | CORS preflight (`204`, `Access-Control-*`). |
 
-Serving priority (each route):
+Serving priority (**chapters** & **audio**):
 
 1. **`MOCK_QURAN_API=true`** → offline scaffold dataset (development / QA).
 2. **Quran Foundation OAuth configured** (`QURAN_CLIENT_ID` + `QURAN_CLIENT_SECRET` or legacy alias env keys) → `@quranjs/api` Content API.
-3. **Public bridge (default)** → read-only **[Quran.com API v4](https://api.quran.com/api/v4/)** from the server (no OAuth).
+3. **Public Quran.com v4 bridge (default when OAuth absent)** → read-only **[Quran.com API v4](https://api.quran.com/api/v4/)** from the server (no OAuth).
 4. If **`QURAN_DISABLE_PUBLIC_HTTP_BRIDGE=true`** and credentials are absent → graceful mock scaffold when **`QURAN_GRACEFUL_MOCK_FALLBACK`** is enabled, else **`503`** `QURAN_BLOCKED`.
 
-### Upstream (public bridge only)
+**`/api/quran/chapters/:id/verses`:** Unless **`MOCK_QURAN_API=true`**, verses are fetched **only via Quran.com v4 HTTPS** (not `@quranjs/api`). This avoids OAuth/SDK payloads that lacked Arabic text. Primary source: **`/verses/by_chapter`** with **`per_page=50`** (max server allows) repeated through **`pagination.total_pages`**. If needed: merge **`GET /v4/quran/verses/uthmani?chapter_number=:id`** by `verse_key`, and **`GET /v4/quran/translations/:id?chapter_number=:id`** zipped by verse order for missing translation lines.
+
+### Upstream verse route (HTTPS, base `https://api.quran.com/api/v4`)
+
+| Step | Path |
+|------|------|
+| Primary (paginated) | `/verses/by_chapter/:id?language=en&words=false&fields=text_uthmani,text_imlaei,text_uthmani_simple,chapter_id&translations={id}&translation_fields=resource_name,language_name&per_page=50&page=N` |
+| Arabic fallback | `/quran/verses/uthmani?chapter_number=:id` |
+| Translation fallback | `/quran/translations/:resourceId?chapter_number=:id` |
+
+### Other routes (HTTPS when public bridge applies)
 
 | DeenNotes route | Quran.com v4 upstream |
 |-----------------|----------------------|
-| `GET /api/quran/chapters` | `GET https://api.quran.com/api/v4/chapters` |
-| `GET /api/quran/chapters/:id/verses` | `GET https://api.quran.com/api/v4/verses/by_chapter/:id` with `language=en`, `words=false`, `per_page=300`, `fields=text_uthmani,text_imlaei`, `translations={id}` |
-| `GET /api/quran/audio` | `GET https://api.quran.com/api/v4/recitations/:reciterId/by_ayah/:verseKey` → audio path joined to **`https://verses.quran.com/`** |
+| `GET /api/quran/chapters` | `GET /chapters` |
+| `GET /api/quran/audio` | `GET /recitations/:reciterId/by_ayah/:verseKey` → path joined with **`https://verses.quran.com/`** |
 
 ## Environment variables
 
@@ -58,7 +67,10 @@ npm run dev
 
 ```bash
 curl -sS "http://localhost:3000/api/quran/chapters" | head -c 600
-curl -sS "http://localhost:3000/api/quran/chapters/1/verses" | head -c 800
+
+# Expect 7 verses, chapterId 1, Arabic + ≥1 translation for 1:1
+curl -sS "http://localhost:3000/api/quran/chapters/1/verses" | python3 -c "import json,sys; r=json.load(sys.stdin); v=r['verses'][0]; print(len(r['verses']), v['chapterId'], v['verseKey'], len(v.get('textUthmani','')), len(v.get('translations') or []))"
+
 curl -sS "http://localhost:3000/api/quran/audio?verseKey=1:1"
 curl -sS "http://localhost:3000/api/quran/audio?chapter=1&verse=1&reciter=7"
 ```
@@ -105,7 +117,7 @@ curl -sS "https://deennotesai.netlify.app/api/quran/audio?verseKey=1:1"
       "chapterId": 1,
       "textUthmani": "…",
       "textImlaei": "…",
-      "translations": [{ "text": "…", "resourceName": "Translation", "resourceId": 85, "languageName": "english" }]
+      "translations": [{ "text": "…", "resourceName": "M.A.S. Abdel Haleem", "resourceId": 85, "languageName": "english" }]
     }
   ],
   "_quran": { "servingMode": "public_http", "offlineReflectionDataset": false }
@@ -140,11 +152,11 @@ curl -sS "https://deennotesai.netlify.app/api/quran/audio?verseKey=1:1"
 - `src/app/api/quran/chapters/route.ts`
 - `src/app/api/quran/chapters/[id]/verses/route.ts`
 - `src/app/api/quran/audio/route.ts`
-- `src/lib/quran/quranDotComPublicFetch.ts`
+- `src/lib/quran/quranDotComPublicFetch.ts` (verse paging + Arabic/translation fallbacks)
+- `src/lib/quran/quranDotComVerses.merge.ts` + **`quranDotComVerses.merge.test.ts`** (pure merge helpers — `npx vitest run src/lib/quran/quranDotComVerses.merge.test.ts`)
 - `src/lib/quran/env.ts` (serving mode + `canServeQuranApiRoutes`)
 
 ## Risks
 
-- **Quran.com availability / rate limits** — all public-bridge traffic depends on `api.quran.com` and `verses.quran.com`.
-- **Long surahs** — verses are requested with `per_page=300` (sufficient for every surah today; if limits change, implement pagination).
-- **Translation naming** — the public bridge sets a generic `resourceName` unless you switch to the OAuth-backed SDK path with full resource metadata.
+- **Quran.com availability / rate limits** — verse payloads depend on `api.quran.com` whenever **`MOCK_QURAN_API` is unset/false**.
+- **Translation ZIP fallback** — `/quran/translations/:id?chapter_number=…` returns lines in ascending verse order with no verse key; mismatched lengths vs `/verses/by_chapter` would skip attaches (detected safely).
