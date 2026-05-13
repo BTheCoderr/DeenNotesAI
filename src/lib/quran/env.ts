@@ -111,6 +111,16 @@ export function isGracefulMockFallbackEffective(): boolean {
 }
 
 /**
+ * When OAuth is absent, `/api/quran/*` can still call public Quran.com REST v4 from the server.
+ * Set `QURAN_DISABLE_PUBLIC_HTTP_BRIDGE=true` to turn this off (routes then follow mock/blocked rules only).
+ */
+export function isQuranPublicHttpBridgeEnabled(): boolean {
+  const raw = process.env.QURAN_DISABLE_PUBLIC_HTTP_BRIDGE?.trim().toLowerCase();
+  if (raw === "true" || raw === "1" || raw === "yes") return false;
+  return true;
+}
+
+/**
  * Offline / scaffolding dataset handlers — mock helpers *before* OAuth SDK paths.
  */
 export function usesOfflineQuranDataset(): boolean {
@@ -118,16 +128,19 @@ export function usesOfflineQuranDataset(): boolean {
   return isGracefulMockFallbackEffective();
 }
 
-/** Quran App Router endpoints may respond (either live OAuth or scaffolding). */
+/** Quran App Router endpoints may respond (live OAuth, scaffolding, or public Quran.com v4). */
 export function canServeQuranApiRoutes(): boolean {
   return (
-    usesOfflineQuranDataset() || isLiveQuranCredentialsConfigured()
+    usesOfflineQuranDataset() ||
+    isLiveQuranCredentialsConfigured() ||
+    isQuranPublicHttpBridgeEnabled()
   );
 }
 
 export function getQuranServingMode(): QuranServingMode {
   if (isMockQuranMode()) return "mock_explicit";
   if (isLiveQuranCredentialsConfigured()) return "live";
+  if (isQuranPublicHttpBridgeEnabled()) return "public_http";
   if (isGracefulMockFallbackEffective()) return "mock_fallback";
   return "blocked";
 }
@@ -148,13 +161,18 @@ function buildIssues(report: Omit<QuranEnvironmentReport, "issues">): QuranEnvIs
       hint: "Quran Foundation OAuth id + secret detected via QURAN_CLIENT_* or legacy ClientID / Client_Secret (values never logged).",
     });
   }
-  if (
-    report.mode === "mock_fallback"
-  ) {
+  if (report.mode === "mock_fallback") {
     issues.push({
       code: "graceful_mock_fallback",
       severity: "warn",
       hint: "Serving scaffold ayāt because Quran Foundation credentials are absent. Set OAuth secrets or MOCK_QURAN_API=true deliberately.",
+    });
+  }
+  if (report.mode === "public_http") {
+    issues.push({
+      code: "public_quran_dotcom_bridge",
+      severity: "info",
+      hint: "Serving Qur’an via public api.quran.com v4 (no OAuth). Optional: QURAN_PUBLIC_TRANSLATION_ID, QURAN_DEFAULT_RECITER_ID.",
     });
   }
   if (report.mode === "blocked") {
@@ -181,6 +199,7 @@ function maybeLogQuranEnvReport(report: QuranEnvironmentReport): void {
   const shouldLog =
     report.mode === "blocked" ||
     report.mode === "mock_fallback" ||
+    report.mode === "public_http" ||
     (process.env.NEXT_PUBLIC_DEBUG_ENV === "true" &&
       process.env.NODE_ENV !== "production");
   if (!shouldLog) return;
@@ -227,9 +246,11 @@ export function validateQuranEnvironment(): QuranEnvironmentReport {
 }
 
 export function snapshotQuranPublicMeta(): QuranPublicApiMeta {
+  const mode = getQuranServingMode();
   return {
-    servingMode: getQuranServingMode(),
-    offlineReflectionDataset: usesOfflineQuranDataset(),
+    servingMode: mode,
+    offlineReflectionDataset:
+      mode === "mock_explicit" || mode === "mock_fallback",
   };
 }
 

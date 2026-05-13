@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import type { QuranMobileRouteCacheMode } from "@/lib/quran/quranDotComPublicFetch";
+import { quranMobilePublicRouteHeaders } from "@/lib/quran/quranDotComPublicFetch";
 import { QuranApiMisconfiguredError } from "@/lib/quran/client";
 import {
   canServeQuranApiRoutes,
@@ -9,10 +11,24 @@ import {
 
 export { safeQuranApiSuccess, safeQuranApiFailure };
 
+/** Merge CORS/cache headers safe for Expo with optional route-specific overrides. */
+export function mergeQuranMobileHeaders(
+  corsMode: QuranMobileRouteCacheMode,
+  extra?: HeadersInit,
+): Headers {
+  const h = new Headers(quranMobilePublicRouteHeaders(corsMode));
+  if (extra) {
+    const e = new Headers(extra);
+    e.forEach((v, k) => h.set(k, v));
+  }
+  return h;
+}
+
 export function quranInvalidRequest(message: string): NextResponse {
   return safeQuranApiFailure(
     { message, code: "QURAN_INVALID_INPUT", retryable: false },
     400,
+    { headers: mergeQuranMobileHeaders("none") },
   );
 }
 
@@ -20,6 +36,7 @@ export function quranNotFoundResponse(message: string): NextResponse {
   return safeQuranApiFailure(
     { message, code: "QURAN_NOT_FOUND", retryable: false },
     404,
+    { headers: mergeQuranMobileHeaders("none") },
   );
 }
 
@@ -31,9 +48,10 @@ export function quranDisabledResponse(): NextResponse {
       code: "QURAN_BLOCKED",
       retryable: false,
       hint:
-        "Operators: add QURAN_CLIENT_ID / QURAN_CLIENT_SECRET (or legacy ClientID / Client_Secret), set MOCK_QURAN_API=true, or leave QURAN_GRACEFUL_MOCK_FALLBACK unset for default graceful scaffold.",
+        "Operators: unset QURAN_DISABLE_PUBLIC_HTTP_BRIDGE, add Quran Foundation OAuth (QURAN_CLIENT_ID / QURAN_CLIENT_SECRET), set MOCK_QURAN_API=true, or enable QURAN_GRACEFUL_MOCK_FALLBACK.",
     },
     503,
+    { headers: mergeQuranMobileHeaders("none") },
   );
 }
 
@@ -81,6 +99,7 @@ export async function guardQuranOrExecute<T extends NextResponse | unknown>(
           "Check Netlify function logs, Quran Foundation status, OAuth env scopes, and gateway overrides (QURAN_GATEWAY_URL / QURAN_OAUTH_BASE_URL).",
       },
       502,
+      { headers: mergeQuranMobileHeaders("none") },
     );
   }
 }

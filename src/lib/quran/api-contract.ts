@@ -4,6 +4,8 @@ export type QuranServingMode =
   | "live"
   | "mock_explicit"
   | "mock_fallback"
+  /** Public api.quran.com v4 HTTP (no OAuth) — production Netlify default when creds absent. */
+  | "public_http"
   /** Routes would 503 until MOCK_QURAN_API or credentials or graceful mock is enabled. */
   | "blocked";
 
