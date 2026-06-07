@@ -29,7 +29,7 @@ import { usePremium } from "../../src/hooks/usePremium";
 import { clearAllLocalPersistedAppData } from "../../src/lib/account/clear-local-user-state";
 import { logoutRevenueCatIfConfigured } from "../../src/lib/purchases/revenuecat-bootstrap";
 import { supabase } from "../../src/lib/supabase";
-import { WIDGET_PREFERENCES_ROUTE } from "../../src/contracts/nav";
+import { QIBLA_ROUTE, WIDGET_PREFERENCES_ROUTE } from "../../src/contracts/nav";
 import {
   border,
   bronze,
@@ -334,6 +334,12 @@ export default function SettingsIndexScreen() {
             href="/quran/settings"
           />
           <ChevRow
+            icon="school-outline"
+            title="Learning mode"
+            subtitle="Gentler copy for people new to Islam"
+            href="/settings/learning-mode"
+          />
+          <ChevRow
             icon="grid-outline"
             title="Widget preferences"
             subtitle="Next prayer, reflection continuity, and home screen context"
@@ -349,6 +355,12 @@ export default function SettingsIndexScreen() {
         </Section>
 
         <Section title="Worship">
+          <ChevRow
+            icon="compass-outline"
+            title="Qibla compass"
+            subtitle="Direction of prayer from your location"
+            href={QIBLA_ROUTE}
+          />
           <ChevRow icon="calendar-outline" title="Hijri calendar" subtitle="Islamic calendar overlays" href="/settings/hijri" />
           <ChevRow
             icon="moon-outline"

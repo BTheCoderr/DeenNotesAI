@@ -47,6 +47,12 @@
         }
       ],
       [
+        "expo-sensors",
+        {
+          "motionPermission": "DeenNotes uses motion sensors to show Qibla direction on the compass."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "sounds": [],

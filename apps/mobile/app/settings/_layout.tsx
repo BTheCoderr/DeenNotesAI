@@ -28,6 +28,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="offline" options={{ title: "Offline Quran" }} />
       <Stack.Screen name="recordings" options={{ title: "Recordings" }} />
       <Stack.Screen name="continuity-preferences" options={{ title: "Reflection preferences" }} />
+      <Stack.Screen name="learning-mode" options={{ title: "Learning mode" }} />
       <Stack.Screen name="widget" options={{ title: "Widget preferences" }} />
       <Stack.Screen name="widget-preferences" options={{ title: "Widget preferences" }} />
       <Stack.Screen name="folders" options={{ title: "Folders" }} />
