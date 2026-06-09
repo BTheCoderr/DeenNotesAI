@@ -1,9 +1,11 @@
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePrayerToday } from "../../src/api/hooks/usePrayerToday";
 import { NextPrayerCard } from "../../src/components/prayer/NextPrayerCard";
+import { QIBLA_ROUTE } from "../../src/contracts/nav";
 import {
   bronze,
   cardBg,
@@ -32,6 +34,19 @@ export default function PrayerSettingsHubScreen() {
         </Text>
         <Pressable style={styles.primary} onPress={() => router.push("/(tabs)/prayer")}>
           <Text style={styles.primaryTxt}>Open Prayer</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.qiblaRow}
+          onPress={() => router.push(QIBLA_ROUTE)}
+          accessibilityRole="button"
+          accessibilityLabel="Qibla compass"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.qiblaTitle}>Qibla compass</Text>
+            <Text style={styles.qiblaSub}>Direction of the Kaaba from your saved location</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={muted} />
         </Pressable>
 
         <NextPrayerCard
@@ -69,6 +84,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   primaryTxt: { color: "#fff", fontWeight: "800", fontSize: fontSizes.md },
+  qiblaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    backgroundColor: cardBg,
+  },
+  qiblaTitle: { fontSize: fontSizes.md, fontWeight: "700", color: ink },
+  qiblaSub: { fontSize: fontSizes.sm, color: muted, marginTop: 4, lineHeight: 18 },
   hint: { fontSize: fontSizes.sm, color: bronze, lineHeight: 20, marginTop: spacing.sm },
   card: {
     marginTop: spacing.lg,

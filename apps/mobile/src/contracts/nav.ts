@@ -29,3 +29,6 @@ export const SETTINGS_PROFILE_ROUTE = `/${SHARED_SETTINGS_PROFILE_ROUTE.mobileRo
 export const QURAN_PREFERENCES_ROUTE = "/quran/settings" as const;
 export const PRAYER_PREFERENCES_ROUTE = "/settings/prayer" as const;
 export const WIDGET_PREFERENCES_ROUTE = "/settings/widget" as const;
+export const SALAH_PLANNER_ROUTE = "/salah-planner" as const;
+export const QIBLA_ROUTE = "/qibla" as const;
+export const LEARNING_MODE_ROUTE = "/settings/learning-mode" as const;

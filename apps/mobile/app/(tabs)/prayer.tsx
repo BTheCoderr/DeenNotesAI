@@ -24,7 +24,12 @@ import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { SettingsGearButton } from "../../src/components/settings/SettingsGearButton";
 import { CalmPulseBlock } from "../../src/components/skeleton/CalmSkeleton";
 import { LOCATION_FALLBACK } from "../../src/contracts/prayer-preferences";
-import { PRAYER_PREFERENCES_ROUTE, SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
+import {
+  PRAYER_PREFERENCES_ROUTE,
+  QIBLA_ROUTE,
+  SALAH_PLANNER_ROUTE,
+  SETTINGS_PROFILE_ROUTE,
+} from "../../src/contracts/nav";
 import { usePremium } from "../../src/hooks/usePremium";
 import { usePremiumFeatureFlags } from "../../src/hooks/usePremiumFeatureFlags";
 import {
@@ -220,6 +225,38 @@ function PrayerScreen() {
         <Text style={styles.lead}>
           A quiet companion for the day&apos;s rhythm — not a dashboard.
         </Text>
+
+        <Pressable
+          style={styles.prefShortcut}
+          onPress={() => router.push(SALAH_PLANNER_ROUTE)}
+          accessibilityRole="button"
+          accessibilityLabel="Salah Planner"
+          accessibilityHint="Plan tasks around today's five prayers"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.prefShortcutTitle}>Salah Planner</Text>
+            <Text style={styles.prefShortcutSub}>
+              Today&apos;s plan — tasks and reflection around each prayer window
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={muted} />
+        </Pressable>
+
+        <Pressable
+          style={styles.prefShortcut}
+          onPress={() => router.push(QIBLA_ROUTE)}
+          accessibilityRole="button"
+          accessibilityLabel="Qibla compass"
+          accessibilityHint="Opens the Qibla compass"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.prefShortcutTitle}>Qibla compass</Text>
+            <Text style={styles.prefShortcutSub}>
+              Find the direction of prayer from where you are
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={muted} />
+        </Pressable>
 
         <Pressable
           style={styles.prefShortcut}

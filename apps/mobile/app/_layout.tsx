@@ -139,6 +139,26 @@ export default function RootLayout() {
                   }}
                 />
                 <Stack.Screen name="quran" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="salah-planner"
+                  options={{
+                    headerShown: true,
+                    title: "Salah Planner",
+                    headerStyle: { backgroundColor: headerSurface },
+                    headerTintColor: emerald,
+                    headerLeft: () => <AppBackHeaderButton fallback="/(tabs)" />,
+                  }}
+                />
+                <Stack.Screen
+                  name="qibla"
+                  options={{
+                    headerShown: true,
+                    title: "Qibla compass",
+                    headerStyle: { backgroundColor: headerSurface },
+                    headerTintColor: emerald,
+                    headerLeft: () => <AppBackHeaderButton fallback="/(tabs)/prayer" />,
+                  }}
+                />
               </Stack>
             </QuranPlaybackProvider>
           </View>

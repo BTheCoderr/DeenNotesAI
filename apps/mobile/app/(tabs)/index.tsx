@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePrayerToday } from "../../src/api/hooks/usePrayerToday";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { SkeletonHeroCard } from "../../src/components/skeleton/CalmSkeleton";
+import { SalahPlannerEntryCard } from "../../src/components/salah-planner/SalahPlannerEntryCard";
 import { ContinueReadingCard } from "../../src/components/today/ContinueReadingCard";
 import { DailyAyahCard } from "../../src/components/today/DailyAyahCard";
 import { JourneyWeekStrip } from "../../src/components/today/JourneyWeekStrip";
@@ -26,6 +27,8 @@ import { SettingsGearButton } from "../../src/components/settings/SettingsGearBu
 import { SETTINGS_PROFILE_ROUTE } from "../../src/contracts/nav";
 import { DEENNOTES_SAFETY_DISCLAIMER } from "../../src/contracts/safety-copy";
 import { readJourneyStreak } from "../../src/lib/continuity-storage";
+import { readLearningMode } from "../../src/lib/learning-mode-storage";
+import { readSalahPlannerCompletionSummary } from "../../src/lib/salah-planner-storage";
 import {
   readContinueReading,
   type ContinueReadingState,
@@ -70,6 +73,9 @@ function TodayScreenInner() {
   );
   const [streak, setStreak] = useState(0);
   const [weekRev, setWeekRev] = useState(0);
+  const [plannerDone, setPlannerDone] = useState(0);
+  const [plannerTotal, setPlannerTotal] = useState(0);
+  const [learningMode, setLearningMode] = useState(false);
 
   const quietLine =
     QUIET_LINES[Math.floor(Date.now() / 60_000) % QUIET_LINES.length];
@@ -78,6 +84,11 @@ function TodayScreenInner() {
     useCallback(() => {
       setWeekRev((n) => n + 1);
       void readJourneyStreak().then(setStreak);
+      void readSalahPlannerCompletionSummary().then(({ done, total }) => {
+        setPlannerDone(done);
+        setPlannerTotal(total);
+      });
+      void readLearningMode().then((lm) => setLearningMode(lm.enabled));
     }, []),
   );
 
@@ -137,6 +148,12 @@ function TodayScreenInner() {
         <JourneyWeekStrip revision={weekRev} />
 
         <DailyAyahCard />
+
+        <SalahPlannerEntryCard
+          completed={plannerDone}
+          total={plannerTotal}
+          learningMode={learningMode}
+        />
 
         <QuietReflectionSection promptLine={quietLine} />
 
