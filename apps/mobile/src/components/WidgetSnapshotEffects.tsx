@@ -14,6 +14,7 @@ import {
   hydrateWidgetSnapshotVerses,
   persistWidgetSnapshot,
 } from "../lib/widget-snapshot";
+import { writeWidgetSharedPayload } from "../lib/widget-shared-payload";
 
 const THROTTLE_MS = 6_000;
 
@@ -79,6 +80,8 @@ export function WidgetSnapshotEffects() {
       const hydrated = await hydrateWidgetSnapshotVerses(snap);
       if (cancelled) return;
       await persistWidgetSnapshot(hydrated);
+      // Minimal payload for the native WidgetKit extension (App Group when available).
+      await writeWidgetSharedPayload(hydrated);
     }
 
     void run();

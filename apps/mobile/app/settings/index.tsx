@@ -30,6 +30,7 @@ import { clearAllLocalPersistedAppData } from "../../src/lib/account/clear-local
 import { logoutRevenueCatIfConfigured } from "../../src/lib/purchases/revenuecat-bootstrap";
 import { supabase } from "../../src/lib/supabase";
 import { QIBLA_ROUTE, WIDGET_PREFERENCES_ROUTE } from "../../src/contracts/nav";
+import { WIDGETS_NATIVE_ENABLED } from "../../src/contracts/widget-runtime";
 import {
   border,
   bronze,
@@ -339,12 +340,14 @@ export default function SettingsIndexScreen() {
             subtitle="Gentler copy for people new to Islam"
             href="/settings/learning-mode"
           />
-          <ChevRow
-            icon="grid-outline"
-            title="Widget preferences"
-            subtitle="Next prayer, reflection continuity, and home screen context"
-            href={WIDGET_PREFERENCES_ROUTE}
-          />
+          {WIDGETS_NATIVE_ENABLED ? (
+            <ChevRow
+              icon="grid-outline"
+              title="Widget preferences"
+              subtitle="Next prayer, reflection continuity, and home screen context"
+              href={WIDGET_PREFERENCES_ROUTE}
+            />
+          ) : null}
           <ChevRow
             icon="location-outline"
             title="Location"
