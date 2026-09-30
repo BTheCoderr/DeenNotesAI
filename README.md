@@ -1,5 +1,10 @@
 # DeenNotes AI
 
+<p align="center">
+  <img src="docs/reference/screenshots/github-social-preview.jpg" alt="DeenNotes AI product overview" width="100%" />
+</p>
+
+
 <p>
   <img src="apps/mobile/assets/icon.png" alt="DeenNotes AI app icon" width="96" />
 </p>
