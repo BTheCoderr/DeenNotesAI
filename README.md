@@ -1,33 +1,48 @@
 # DeenNotes AI
 
 <!-- repo-intro:start -->
-**Project snapshot:** DeenNotes AI is a mobile-first reflection tool that turns khutbah, lecture, Quran reflection, halaqa, and reminder notes into structured summaries, action steps, and shareable cards without presenting itself as a source of religious rulings.
+**Project snapshot:** DeenNotes AI is a shipped iPhone/iPad app for Islamic reflection, Quran study, prayer planning, journaling, reminders, and AI-assisted note organization. The product is intentionally scoped as a reflection and productivity companion—not a source of fatwas or religious rulings.
 
-**What it demonstrates:** Next.js · Supabase/RLS · AI summarization · structured output · privacy-conscious beta architecture.
+**Current product:** App Store version **1.0.4** · React Native / Expo mobile app · Next.js web companion/API · Supabase Auth/Postgres/RLS · RevenueCat subscriptions · pluggable AI providers.
+
+**What it demonstrates:** shipping a real consumer mobile product end-to-end: native app UX, authentication, subscriptions, Quran/audio features, prayer utilities, AI-assisted structured output, privacy/security hardening, and App Store release operations.
 <!-- repo-intro:end -->
 
 <!-- portfolio-refresh:start -->
-## Product flow
+## Shipped product
 
-1. Capture rough khutbah, lecture, Quran reflection, halaqa, or reminder notes.
-2. Send the note through a structured AI summarization path.
-3. Return a short summary, main reminder, organized takeaways, and practical action steps.
-4. Save the reflection under the signed-in user's RLS-protected account.
-5. Turn selected content into a shareable card without presenting the output as a religious ruling.
+**DeenNotes AI is live on the Apple App Store.**
+
+- **App Store:** https://apps.apple.com/us/app/deennotes-ai/id6767057471
+- **Web companion:** https://deennotesai.netlify.app/
+- **Current mobile source version:** 1.0.4
+- **Platforms:** iPhone and iPad
+
+### Core experience
+
+1. Capture khutbah, lecture, Quran reflection, halaqa, reminder, or personal journal notes.
+2. Turn rough notes into structured reflections, summaries, reminders, takeaways, and action steps.
+3. Read Quran with Arabic ayahs, translations, and audio support.
+4. Organize the day with prayer tools, Salah Planner, reminders, Qibla, and beginner-friendly Learning Mode.
+5. Save account-owned reflections securely with Supabase Auth + RLS.
+6. Unlock premium features through RevenueCat-backed App Store subscriptions.
 
 ## Engineering highlights
 
-- pluggable AI provider selection instead of one hard-coded model vendor
+- React Native + Expo Router mobile app in `apps/mobile`
+- Next.js companion web app and server routes
 - Supabase Auth + owner-scoped Postgres RLS
-- structured output validation for predictable summaries
-- public-repo secret hygiene and documented deployment checks
-- product copy guardrail: reflection/organization support, **not fatwas or rulings**
-- beta QA and deployment runbooks tracked alongside code
+- RevenueCat iOS subscription integration
+- pluggable AI provider selection instead of one hard-coded model vendor
+- structured AI output validation for predictable reflections
+- Quran reading/audio, local recording, prayer reminders, Qibla, and Salah Planner flows
+- public-repo secret hygiene and deployment checks
+- product guardrail: reflection/organization support, **not fatwas or rulings**
 
-The technical challenge is not just summarization; it is producing useful structure while keeping the product's religious scope intentionally narrow and transparent.
+The technical challenge is broader than summarization: DeenNotes combines mobile product UX, faith-sensitive scope, subscriptions, account security, audio/device capabilities, and reliable AI output in one shipped consumer app.
 <!-- portfolio-refresh:end -->
 
-Mobile-first web app: turn khutbah notes, lectures, Quran reflections, halaqa notes, and reminders into structured summaries, action steps, and shareable cards—**not** fatwas or rulings.
+DeenNotes AI is mobile-first: the shipped React Native / Expo app is the primary product, with a Next.js web companion and API supporting the broader experience.
 
 ## Public repo safety
 
@@ -46,9 +61,20 @@ Before inviting the first ~10 beta users:
 
 ## Stack
 
-- Next.js App Router, TypeScript, Tailwind CSS  
-- Supabase Auth + Postgres (RLS)  
+### Mobile
+- React Native + Expo 54
+- Expo Router
+- TypeScript
+- Supabase Auth/Postgres
+- RevenueCat
+- Sentry
+
+### Web / server
+- Next.js App Router
+- TypeScript + Tailwind CSS
+- Supabase Auth + Postgres (RLS)
 - Pluggable AI: OpenAI, Anthropic, or Groq (`AI_PROVIDER`)
+- Netlify
 
 ## Prerequisites
 
