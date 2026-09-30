@@ -48,16 +48,16 @@ DeenNotes AI is mobile-first: the shipped React Native / Expo app is the primary
 
 Treat this repo as **safe to make public**: tracked files must not contain database passwords, Supabase **service_role** or **secret** keys, AI provider keys, JWTs, or real **Project Refs**. Clone [`.env.example`](.env.example) to **`.env.local`** (or `.env`), add your values only on your machine, and rely on **`.gitignore`** (`.env*` with an exception for `.env.example`). The Next.js app uses the **anon/publishable** client key with **RLS**; `SUPABASE_SERVICE_ROLE_KEY` is optional and **not** used by app routes—never prefix it with `NEXT_PUBLIC_`.
 
-## Beta launch checklist
+## Production / release checklist
 
-Before inviting the first ~10 beta users:
+For ongoing releases and maintenance:
 
-1. **Database** — Run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql). If this project ran an older `001` without `short_summary` / `main_reminder`, also run [`supabase/migrations/002_short_summary_main_reminder.sql`](supabase/migrations/002_short_summary_main_reminder.sql). Confirm RLS stays enabled on `profiles`, `deen_notes`, and `saved_share_cards` (see [verification SQL](#verify-schema-and-rls-after-db-push) below).
-2. **Supabase Auth** — Site URL and redirect URLs match your deployment (`/auth/callback`). Decide production email confirmation behavior.
-3. **Environment** — Set variables from [`.env.example`](.env.example) on the host. Prefer **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`**; **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** is an optional fallback when publishable is unset. Never put **service_role** in `NEXT_PUBLIC_*`; keep `SUPABASE_SERVICE_ROLE_KEY` server-only and out of the browser bundle.
-4. **AI** — Verify `AI_PROVIDER` and API keys; smoke-test note generation in staging.
-5. **QA** — Complete and sign off [`docs/MVP_LAUNCH_QA.md`](docs/MVP_LAUNCH_QA.md).
-6. **Positioning** — Copy stays humble: journal and reflection, not scholar or fatwa replacement.
+1. **Database** — Keep Supabase migrations in `supabase/migrations/` as the source of truth and verify RLS remains enabled on account-owned tables.
+2. **Auth** — Keep Supabase Site URL and redirect allowlists aligned with the production web companion and mobile deep-link flow.
+3. **Environment** — Keep public/publishable Supabase values client-safe and all service-role / AI provider secrets server-side.
+4. **AI** — Smoke-test structured reflection generation after provider or prompt changes.
+5. **Mobile** — Run the Expo typecheck/doctor flow and verify sign-in, Reflect, Quran/audio, Prayer/Salah Planner, Premium/restore, and Settings before an App Store submission.
+6. **Positioning** — Keep product copy scoped to journaling, reflection, study, and productivity support rather than religious rulings.
 
 ## Stack
 
@@ -157,7 +157,7 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
 2. **Configure Supabase**
 
    - **Settings → API**: copy project URL (e.g. `https://YOUR_PROJECT_REF.supabase.co`) and the **publishable** client key (or legacy **anon** key — same permission level; never the `service_role` key for `NEXT_PUBLIC_*`).
-   - **Authentication → URL configuration**: set **Site URL** to `http://localhost:3000` (and your production URL on Vercel).
+   - **Authentication → URL configuration**: set local development redirects for `http://localhost:3000` and production redirects for `https://deennotesai.netlify.app` plus the mobile deep-link/callback flow.
    - Redirects: `http://localhost:3000/auth/callback` (and `https://your-domain.com/auth/callback` in production).
 
 3. **Database**
@@ -187,10 +187,13 @@ Expect three rows in the first query and `rls_enabled = true` for all three in t
 
    Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Deploy the web companion on Netlify
 
-- Import the repo; set the same env vars in the Vercel project (including optional `SUPABASE_SERVICE_ROLE_KEY` only if you add server jobs that need it—never as a public var).
-- Point Supabase **Site URL** and redirect URLs at your Vercel domain.
+- The production web companion is hosted at `https://deennotesai.netlify.app`.
+- Configure the Netlify project with the same required server/client environment variables documented in `.env.example`.
+- Keep `SUPABASE_SERVICE_ROLE_KEY` server-only and never expose it through a `NEXT_PUBLIC_*` variable.
+- Keep Supabase Site URL / redirect allowlists synchronized with the Netlify production URL.
+- Documentation-only commits can use `[skip netlify]` to avoid unnecessary production builds.
 
 ## Deploy on Netlify
 
