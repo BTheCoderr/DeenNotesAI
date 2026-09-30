@@ -1,5 +1,19 @@
 # DeenNotes AI
 
+<p>
+  <img src="apps/mobile/assets/icon.png" alt="DeenNotes AI app icon" width="96" />
+</p>
+
+[![CI](https://github.com/BTheCoderr/DeenNotesAI/actions/workflows/ci.yml/badge.svg)](https://github.com/BTheCoderr/DeenNotesAI/actions/workflows/ci.yml)
+![App Store](https://img.shields.io/badge/App%20Store-Live-000000?logo=apple)
+![iOS](https://img.shields.io/badge/iOS-1.0.4-000000?logo=apple)
+![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo)
+![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+
+**App Store:** https://apps.apple.com/us/app/deennotes-ai/id6767057471 · **Web companion:** https://deennotesai.netlify.app/
+
+
 <!-- repo-intro:start -->
 **Project snapshot:** DeenNotes AI is a shipped iPhone/iPad app for Islamic reflection, Quran study, prayer planning, journaling, reminders, and AI-assisted note organization. The product is intentionally scoped as a reflection and productivity companion—not a source of fatwas or religious rulings.
 
@@ -27,6 +41,33 @@
 5. Save account-owned reflections securely with Supabase Auth + RLS.
 6. Unlock premium features through RevenueCat-backed App Store subscriptions.
 
+## Architecture
+
+```text
+iPhone / iPad (React Native + Expo)
+              │
+              ├──────────────► RevenueCat ─────► App Store subscriptions
+              │
+              ▼
+        Next.js web/API
+          │     │     │
+          ▼     ▼     ▼
+      Supabase  AI   Quran services
+      Auth/DB   providers/content/audio
+       + RLS
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the system boundaries and production responsibilities.
+
+## Repository guide
+
+- [CHANGELOG.md](CHANGELOG.md) — production release history
+- [ROADMAP.md](ROADMAP.md) — shipped, improving, and exploring
+- [docs/README.md](docs/README.md) — current vs. historical product documentation
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development and review expectations
+- [SECURITY.md](SECURITY.md) — vulnerability and secret-handling policy
+- [.github/workflows/ci.yml](.github/workflows/ci.yml) — automated web/mobile verification
+
 ## Engineering highlights
 
 - React Native + Expo Router mobile app in `apps/mobile`
@@ -47,6 +88,19 @@ DeenNotes AI is mobile-first: the shipped React Native / Expo app is the primary
 ## Public repo safety
 
 Treat this repo as **safe to make public**: tracked files must not contain database passwords, Supabase **service_role** or **secret** keys, AI provider keys, JWTs, or real **Project Refs**. Clone [`.env.example`](.env.example) to **`.env.local`** (or `.env`), add your values only on your machine, and rely on **`.gitignore`** (`.env*` with an exception for `.env.example`). The Next.js app uses the **anon/publishable** client key with **RLS**; `SUPABASE_SERVICE_ROLE_KEY` is optional and **not** used by app routes—never prefix it with `NEXT_PUBLIC_`.
+
+## Repository quality gates
+
+Every pull request is set up to run GitHub CI for:
+
+- root TypeScript verification
+- Vitest tests
+- mobile TypeScript verification
+- a production-style Next.js build using safe CI placeholder configuration
+
+Dependency update PRs are managed by Dependabot. Pull requests and issues use repository templates, and CODEOWNERS routes changes to the maintainer.
+
+**Deployment is deliberately separate from CI.** A passing GitHub check or merged pull request is not treated as permission to publish a Netlify or App Store release.
 
 ## Production / release checklist
 
@@ -219,3 +273,8 @@ From the repo you can also use **`npm run netlify:deploy:prod`** (see [Netlify C
 ## Product disclaimer
 
 DeenNotes is for organizing Islamic learning and personal reflection. It does not provide fatwas or religious rulings. Users should consult a qualified scholar or imam for religious decisions.
+
+## License
+
+Copyright © 2026 Baheem Ferrell. All rights reserved. This public repository is viewable for portfolio, review, and collaboration purposes; it is **not** released under an open-source license. See [LICENSE](LICENSE).
+
