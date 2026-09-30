@@ -39,7 +39,7 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.16",
-    "dotenv": "^16.4.5",
+    "dotenv": "^18.0.4",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-purchases": "^10.1.0",
