@@ -1,5 +1,11 @@
 # DeenNotes AI
 
+<!-- repo-intro:start -->
+**Project snapshot:** DeenNotes AI is a mobile-first reflection tool that turns khutbah, lecture, Quran reflection, halaqa, and reminder notes into structured summaries, action steps, and shareable cards without presenting itself as a source of religious rulings.
+
+**What it demonstrates:** Next.js · Supabase/RLS · AI summarization · structured output · privacy-conscious beta architecture.
+<!-- repo-intro:end -->
+
 Mobile-first web app: turn khutbah notes, lectures, Quran reflections, halaqa notes, and reminders into structured summaries, action steps, and shareable cards—**not** fatwas or rulings.
 
 ## Public repo safety
