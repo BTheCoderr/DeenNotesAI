@@ -6,6 +6,27 @@
 **What it demonstrates:** Next.js · Supabase/RLS · AI summarization · structured output · privacy-conscious beta architecture.
 <!-- repo-intro:end -->
 
+<!-- portfolio-refresh:start -->
+## Product flow
+
+1. Capture rough khutbah, lecture, Quran reflection, halaqa, or reminder notes.
+2. Send the note through a structured AI summarization path.
+3. Return a short summary, main reminder, organized takeaways, and practical action steps.
+4. Save the reflection under the signed-in user's RLS-protected account.
+5. Turn selected content into a shareable card without presenting the output as a religious ruling.
+
+## Engineering highlights
+
+- pluggable AI provider selection instead of one hard-coded model vendor
+- Supabase Auth + owner-scoped Postgres RLS
+- structured output validation for predictable summaries
+- public-repo secret hygiene and documented deployment checks
+- product copy guardrail: reflection/organization support, **not fatwas or rulings**
+- beta QA and deployment runbooks tracked alongside code
+
+The technical challenge is not just summarization; it is producing useful structure while keeping the product's religious scope intentionally narrow and transparent.
+<!-- portfolio-refresh:end -->
+
 Mobile-first web app: turn khutbah notes, lectures, Quran reflections, halaqa notes, and reminders into structured summaries, action steps, and shareable cards—**not** fatwas or rulings.
 
 ## Public repo safety
